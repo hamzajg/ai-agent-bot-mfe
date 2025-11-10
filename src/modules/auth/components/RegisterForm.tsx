@@ -31,7 +31,7 @@ const RegisterForm: React.FC<Props> = ({ onSuccess, onToggleMode }) => {
 
   return (
     <div className="w-full">
-      <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-900">Shop Name</label>
           <div className="relative">
@@ -39,7 +39,7 @@ const RegisterForm: React.FC<Props> = ({ onSuccess, onToggleMode }) => {
               type="text"
               value={shopName}
               onChange={(e) => setShopName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 outline-none bg-gray-50/50"
               required
               placeholder="Your Shop Name"
               autoComplete="organization"
@@ -54,7 +54,7 @@ const RegisterForm: React.FC<Props> = ({ onSuccess, onToggleMode }) => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 outline-none bg-gray-50/50"
               required
               placeholder="your@email.com"
               autoComplete="email"
@@ -69,18 +69,18 @@ const RegisterForm: React.FC<Props> = ({ onSuccess, onToggleMode }) => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 outline-none bg-gray-50/50"
               required
               placeholder="••••••••"
               autoComplete="new-password"
               minLength={6}
             />
           </div>
-          <p className="text-xs text-gray-500">Must be at least 6 characters long</p>
+            <p className="text-xs text-gray-500 pl-1">Must be at least 6 characters long</p>
         </div>
 
         {error && (
-          <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg">
+            <div className="p-3 text-sm text-red-600 bg-red-50/50 border border-red-100 rounded-lg">
             {error}
           </div>
         )}
@@ -89,8 +89,8 @@ const RegisterForm: React.FC<Props> = ({ onSuccess, onToggleMode }) => {
           type="submit"
           disabled={isLoading}
           className="w-full bg-blue-600 text-white rounded-lg px-4 py-2.5 font-medium
-            hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed
-            focus:ring-4 focus:ring-blue-500/50 transition-all duration-200"
+              hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20
+              focus:ring-4 focus:ring-blue-500/30 transition-all duration-200"
         >
           {isLoading ? (
             <span className="flex items-center justify-center gap-2">
@@ -105,20 +105,20 @@ const RegisterForm: React.FC<Props> = ({ onSuccess, onToggleMode }) => {
           )}
         </button>
 
-        <div className="relative my-6">
+          <div className="relative my-8">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-200"></div>
+              <div className="w-full border-t border-gray-100"></div>
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 text-gray-500 bg-white">Already have an account?</span>
+              <span className="px-2 text-gray-500 bg-white text-sm">Already have an account?</span>
           </div>
         </div>
 
         <button
           type="button"
           onClick={onToggleMode}
-          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-gray-700 font-medium
-            hover:bg-gray-50 focus:ring-4 focus:ring-gray-200/50 transition-all duration-200"
+            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-gray-600 font-medium
+              hover:bg-gray-50/50 hover:border-gray-300 focus:ring-4 focus:ring-gray-200/50 transition-all duration-200"
         >
           Login to your account
         </button>

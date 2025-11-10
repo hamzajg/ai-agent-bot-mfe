@@ -13,6 +13,8 @@ A modular micro-frontend application featuring an AI chatbot agent with admin da
   - Gemini
   - Ollama
 
+![Project preview](./docs/image-1.png)
+
 ## Project Structure
 
 ```
@@ -25,6 +27,7 @@ src/
 │   └── widget/       # Embeddable chat widget
 └── shared/           # Shared components and utilities
 ```
+
 
 ## Getting Started
 
