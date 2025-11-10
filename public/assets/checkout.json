@@ -1,0 +1,12 @@
+{
+  "status": "ok",
+  "message": "Checkout started",
+  "summary": {
+    "items": [
+      { "productId": "p1", "name": "Wireless Headphones", "quantity": 1, "price": 99.99 }
+    ],
+    "subtotal": 99.99,
+    "shipping": 5.00,
+    "total": 104.99
+  }
+}

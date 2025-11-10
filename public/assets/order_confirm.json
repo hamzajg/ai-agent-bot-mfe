@@ -1,0 +1,10 @@
+{
+  "status": "ok",
+  "message": "Order confirmed",
+  "order": {
+    "id": "ord_1001",
+    "status": "confirmed",
+    "confirmedAt": "2025-11-10T12:00:00Z",
+    "total": 104.99
+  }
+}

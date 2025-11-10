@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Demo E-Shop Host</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 font-sans">
+  <div class="p-10">
+    <h1 class="text-3xl font-bold mb-6">Welcome to My Online Store 🛍️</h1>
+    <p class="mb-4 text-gray-700">
+      This is a sample e-commerce site to demo the AI Chatbot widget integration.
+    </p>
+    <div class="grid grid-cols-3 gap-6">
+      <div class="bg-white rounded-lg shadow p-4">
+        <h2 class="font-semibold">Product A</h2>
+        <p>$19.99</p>
+      </div>
+      <div class="bg-white rounded-lg shadow p-4">
+        <h2 class="font-semibold">Product B</h2>
+        <p>$29.99</p>
+      </div>
+      <div class="bg-white rounded-lg shadow p-4">
+        <h2 class="font-semibold">Product C</h2>
+        <p>$49.99</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Root container for chatbot -->
+  <div id="chatbot-root"></div>
+  <script src="http://localhost:8081/widget/chatbot-widget.iife.js"></script>
+  <script>
+    // Initialize the chatbot
+    window.ChatBot.init({
+      rootId: "chatbot-root" // optional, defaults to "chatbot-root"
+    });
+  </script>
+</body>
+
+</html>

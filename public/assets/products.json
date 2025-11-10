@@ -1,0 +1,7 @@
+[
+  { "id": "p1", "name": "Wireless Headphones", "description": "Noise-cancelling over-ear headphones", "price": 99.99 },
+  { "id": "p2", "name": "Smart Watch", "description": "Fitness tracking with heart-rate monitor", "price": 149.00 },
+  { "id": "p3", "name": "USB-C Charger", "description": "Fast charging 45W USB-C wall adapter", "price": 24.50 },
+  { "id": "p4", "name": "Bluetooth Speaker", "description": "Portable waterproof speaker", "price": 59.00 },
+  { "id": "p5", "name": "4K Monitor", "description": "27-inch UHD IPS display", "price": 329.99 }
+]

@@ -1,0 +1,10 @@
+{
+  "status": "ok",
+  "message": "Item removed from cart",
+  "cart": {
+    "items": [
+      { "productId": "p1", "name": "Wireless Headphones", "quantity": 1, "price": 99.99 }
+    ],
+    "subtotal": 99.99
+  }
+}

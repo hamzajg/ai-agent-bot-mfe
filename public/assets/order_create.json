@@ -1,0 +1,15 @@
+{
+  "status": "ok",
+  "message": "Order created",
+  "order": {
+    "id": "ord_1001",
+    "items": [
+      { "productId": "p1", "name": "Wireless Headphones", "quantity": 1, "price": 99.99 }
+    ],
+    "subtotal": 99.99,
+    "shipping": 5.00,
+    "total": 104.99,
+    "customer": { "name": "Jane Doe", "email": "jane@example.com", "address": "1 Market St, SF" },
+    "status": "pending_confirmation"
+  }
+}

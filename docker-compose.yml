@@ -1,0 +1,15 @@
+version: '3.9'
+services:
+  ai-agent-bot-mfe:
+    build: .
+    container_name: ai-agent-bot
+    ports:
+      - "8081:80"
+    environment:
+      - VITE_APP_ENV=production
+      - VITE_OPENAI_API_KEY=${VITE_OPENAI_API_KEY}
+      - VITE_GEMINI_API_KEY=${VITE_GEMINI_API_KEY}
+      - VITE_OLLAMA_API_URL=${VITE_OLLAMA_API_URL}
+    volumes:
+      - .:/app
+    restart: unless-stopped

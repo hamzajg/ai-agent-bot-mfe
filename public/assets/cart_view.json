@@ -1,0 +1,10 @@
+{
+  "status": "ok",
+  "cart": {
+    "items": [
+      { "productId": "p1", "name": "Wireless Headphones", "quantity": 1, "price": 99.99 },
+      { "productId": "p3", "name": "USB-C Charger", "quantity": 1, "price": 24.50 }
+    ],
+    "subtotal": 124.49
+  }
+}
