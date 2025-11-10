@@ -38,7 +38,7 @@ src/
 
 1. Clone the repository
 ```bash
-git clone [repository-url]
+git clone https://github.com/hamzajg/ai-agent-bot-mfe.git
 cd ai-agent-bot-mfe
 ```
 

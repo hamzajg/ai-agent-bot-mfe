@@ -285,7 +285,7 @@ const LandingApp: React.FC = () => {
             </div>
             <p className="text-sm text-gray-600 mb-2">Run everything on your own infrastructure — the dashboard, widget assets, and optional backend — using Docker Compose. This gives you full custody of data and configuration.</p>
             <ol className="list-decimal pl-6 space-y-2 text-gray-700 text-sm">
-              <li>Clone the repository to your server: <code className="bg-gray-100 px-1 rounded">git clone &lt;repo-url&gt;</code>.</li>
+              <li>Clone the repository to your server: <code className="bg-gray-100 px-1 rounded">git clone https://github.com/hamzajg/ai-agent-bot-mfe.git</code>.</li>
               <li>Change into the project directory: <code className="bg-gray-100 px-1 rounded">cd ai-agent-bot-mfe-complete</code>.</li>
               <li>Start the app with Docker Compose: <code className="bg-gray-100 px-1 rounded">docker compose up --build -d</code>. This builds the app and serves the static bundles from Nginx on port 8081 by default.</li>
               <li>Open <code className="bg-gray-100 px-1 rounded">http://&lt;your-host&gt;:8081</code> and navigate to <code className="bg-gray-100 px-1 rounded">/dashboard</code> to configure the agent. Place any local mock assets under <code className="bg-gray-100 px-1 rounded">public/assets</code>.</li>
