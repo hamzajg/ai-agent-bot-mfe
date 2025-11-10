@@ -3,7 +3,7 @@ import { Bot } from 'lucide-react';
 import { AIAgent } from '../../agent/AIAgent';
 import { logEvent, getSettings } from '@shared/utils/usage';
 import { Product } from '@shared/types';
-import { agentProfile } from '../../agent/agentProfile';
+import { agentProfile } from '@modules/agent/agentProfile';
 
 const ChatBotWidget: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
