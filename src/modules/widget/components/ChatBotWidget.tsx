@@ -3,7 +3,7 @@ import { Bot } from 'lucide-react';
 import { AIAgent } from '../../agent/AIAgent';
 import { logEvent, getSettings } from '@shared/utils/usage';
 import { Product } from '@shared/types';
-import { agentProfile } from '@modules/agent/agentProfile';
+import { agentProfile } from '../../agent/agentProfile';
 
 const ChatBotWidget: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -55,29 +55,69 @@ const ChatBotWidget: React.FC = () => {
       setIsTyping(true);
       const reply = await AIAgent.sendMessage(content);
 
-      // Try to parse action JSON: {"action":"Products Search","params":{"text":"..."}}
+      // Try to extract and parse a JSON action object from the reply
       let handled = false;
       try {
-        const trimmed = reply.trim();
-        if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-          const obj = JSON.parse(trimmed) as { action?: string; params?: Record<string, any> };
+        const jsonMatch = reply.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const obj = JSON.parse(jsonMatch[0]) as { action?: string; params?: Record<string, any> };
           if (obj && obj.action) {
-            const actionName = obj.action.toLowerCase();
-            if (actionName === 'products search') {
-              const q = String(obj.params?.text || '');
-              if (q) {
-                append({ sender: 'bot', text: '🔎 Searching products...' });
-                logEvent('action_called', { name: 'Products Search', source: 'tool_call' });
-                // Call products service
-                // Here we would make the actual API call to search products
-                // For now just show a placeholder response
-                append({ sender: 'bot', text: `Found products matching "${q}"...` });
+            const actionName = String(obj.action).toLowerCase();
+
+            // find matching action from agent profile
+            const action = agentProfile.actions.find((a) => a.name.toLowerCase() === actionName);
+            if (action) {
+              append({ sender: 'bot', text: `🔎 Executing action: ${action.name}...` });
+              try {
+                logEvent('action_called', { name: action.name, source: 'tool_call' });
+
+                // Build URL
+                const cfg = (window as any).__AGENT_CONFIG || {};
+                const base = (cfg.assetsBaseUrl || '').replace(/\/$/, '');
+                const endpoint = action.endpoint || '';
+                const url = endpoint.startsWith('http') ? endpoint : `${base}${endpoint}`;
+
+                let fetchUrl = url;
+                const params = obj.params || {};
+                let fetchOptions: RequestInit = { method: (action.method || 'GET').toUpperCase() };
+                if ((fetchOptions.method || 'GET') === 'GET') {
+                  const qs = new URLSearchParams();
+                  for (const [k, v] of Object.entries(params || {})) qs.set(k, String(v));
+                  fetchUrl = qs.toString() ? `${fetchUrl}${fetchUrl.includes('?') ? '&' : '?'}${qs.toString()}` : fetchUrl;
+                } else {
+                  fetchOptions = { ...fetchOptions, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) };
+                }
+
+                const res = await fetch(fetchUrl, fetchOptions);
+                let data: any = null;
+                const ctype = res.headers.get('content-type') || '';
+                if (ctype.includes('application/json')) data = await res.json();
+                else data = await res.text();
+
+                // Present results in a friendly way
+                if (Array.isArray(data)) {
+                  append({ sender: 'bot', text: `Found ${data.length} results.` });
+                  // show first few items if they have title/description
+                  const preview = data.slice(0, 5).map((it: any, i: number) => `- ${it.title || it.name || it.id || 'item'}${it.price ? ` (${it.price})` : ''}`).join('\n');
+                  append({ sender: 'bot', text: preview });
+                } else if (typeof data === 'object' && data !== null) {
+                  append({ sender: 'bot', text: JSON.stringify(data, null, 2) });
+                } else {
+                  append({ sender: 'bot', text: String(data) });
+                }
+
+                handled = true;
+              } catch (err) {
+                append({ sender: 'bot', text: `Action failed: ${String(err)}` });
+                try { logEvent('error', { message: String(err) }); } catch {}
                 handled = true;
               }
             }
           }
         }
-      } catch {}
+      } catch (e) {
+        // parsing/execution failed, fall back to normal reply
+      }
 
       if (!handled) {
         // If the user started with a greeting and had a request, prefer a single tailored message.

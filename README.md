@@ -14,6 +14,7 @@ A modular micro-frontend application featuring an AI chatbot agent with admin da
   - Ollama
 
 ![Project preview](./docs/image-1.png)
+![Demo preview](./docs/image-2.png)
 
 ## Project Structure
 
