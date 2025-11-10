@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {AuthService} from '.';
 import LoginForm from './components/LoginForm';
 import RegisterForm from './components/RegisterForm';
+import { useAuth } from './hooks/useAuth';
 
 interface Props {
   children: React.ReactNode;
@@ -11,6 +12,7 @@ const AuthWrapper: React.FC<Props> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const { handleAuthSuccess: authSuccessWithNavigation } = useAuth();
 
   useEffect(() => {
     setIsAuthenticated(AuthService.isLoggedIn());
@@ -19,6 +21,7 @@ const AuthWrapper: React.FC<Props> = ({ children }) => {
 
   const handleAuthSuccess = () => {
     setIsAuthenticated(true);
+    authSuccessWithNavigation();
   };
 
   if (isLoading) {
