@@ -16,6 +16,8 @@ A modular micro-frontend application featuring an AI chatbot agent with admin da
 ![Project preview](./docs/image-1.png)
 ![Demo preview](./docs/image-2.png)
 
+Live Demo Here: https://ai-agent-chatbot-58638.web.app/
+
 ## Project Structure
 
 ```
