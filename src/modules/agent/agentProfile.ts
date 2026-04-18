@@ -216,20 +216,22 @@ export function buildSystemPrompt(): string {
     lines.push('');
   }
 
+  lines.push('# Response Rules - VERY IMPORTANT');
+  lines.push('');
+  lines.push('For GENERAL CONVERSATION (questions, greetings, explanations, help):');
+  lines.push('- Respond with plain conversational text');
+  lines.push('- NEVER wrap your response in JSON unless you are explicitly requesting an action');
+  lines.push('- Use friendly, helpful responses based on your role and mission');
+  lines.push('');
+  lines.push('For ACTIONS or NAVIGATION:');
+  lines.push('- Only use JSON when the user explicitly asks to search, navigate, add to cart, checkout, etc.');
+  lines.push('- When using JSON, respond with ONLY the JSON object - no conversational text:');
   if (profile.routes?.length) {
-    lines.push(
-      'When the user wants to navigate to a page, respond with ONLY a JSON object for navigation:'
-    );
-    lines.push('{"navigate":"<Route Name>","params":{"<key>":"<value>"}}');
-    lines.push('Example: {"navigate":"Product Details","params":{"id":"123"}}');
-    lines.push('');
+    lines.push('  Navigation: {"navigate":"<Route Name>","params":{"<key>":"<value>"}}');
   }
-
-  lines.push(
-    'When you want the client to execute an action, respond with ONLY a single JSON object on one line, no extra text:'
-  );
-  lines.push('{"action":"<Action Name>","params":{"<key>":"<value>"}}');
-  lines.push('Example: {"action":"Products Search","params":{"text":"wireless headphones"}}');
+  lines.push('  Action: {"action":"<Action Name>","params":{"<key>":"<value>"}}');
+  lines.push('');
+  lines.push('NEVER use JSON for general questions - if you are not sure what to do, just answer the question conversationally.');
   lines.push('');
 
   lines.push('# Response Formatting Guidelines');

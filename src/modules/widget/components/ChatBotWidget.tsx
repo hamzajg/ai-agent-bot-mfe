@@ -276,22 +276,20 @@ setIsTyping(true);
         if (jsonMatch) {
           const obj = JSON.parse(jsonMatch[0]) as { action?: string; navigate?: string; params?: Record<string, any> };
 
-          // Handle navigation
+          // Handle navigation only if user explicitly requested it
           if (obj && obj.navigate) {
-            const routeName = String(obj.navigate);
-            const route = currentProfile.routes?.find((r) => r.name.toLowerCase() === routeName.toLowerCase());
-            if (route) {
-              let path = route.path;
-              const params = obj.params || {};
-              for (const [key, value] of Object.entries(params)) {
-                path = path.replace(`{${key}}`, String(value));
-              }
-
-              // Check if user explicitly asked for navigation
-              const userLower = content.toLowerCase();
-              const explicitNav = /^(navigate|go to|show me|take me|open|view product|see product|check out)\b/i.test(userLower);
-
-              if (explicitNav) {
+            const userLower = content.toLowerCase();
+            const explicitNav = /^(navigate|go to|show me|take me|open|view|see|check out|go|visit)\b/i.test(userLower);
+            
+            if (explicitNav) {
+              const routeName = String(obj.navigate);
+              const route = currentProfile.routes?.find((r) => r.name.toLowerCase() === routeName.toLowerCase());
+              if (route) {
+                let path = route.path;
+                const params = obj.params || {};
+                for (const [key, value] of Object.entries(params)) {
+                  path = path.replace(`{${key}}`, String(value));
+                }
                 append({ sender: 'bot', text: `🧭 Navigating to ${route.name}...` });
                 try {
                   window.location.href = path;
@@ -300,28 +298,21 @@ setIsTyping(true);
                   append({ sender: 'bot', text: `Navigation failed: ${String(err)}` });
                   handled = true;
                 }
-              } else {
-                // Show clickable link instead of auto-navigate
-                append({
-                  sender: 'bot',
-                  text: `Would you like to ${route.name.toLowerCase()}?`,
-                  action: 'navigate',
-                  link: path,
-                  linkLabel: route.name,
-                });
-                handled = true;
               }
+              // If route not found, don't mark as handled - fall back to conversational
             }
+            // If not explicit navigation request, ignore JSON and respond conversationally
           }
 
-          // Handle action
+          // Handle action only if user explicitly asked for it
           if (!handled && obj && obj.action) {
-            const actionName = String(obj.action).toLowerCase();
-
-            // find matching action from agent profile
-            const action = currentProfile.actions.find((a) => a.name.toLowerCase() === actionName);
+            const userLower = content.toLowerCase();
+            const explicitAction = /\b(search|find|lookup|add to cart|remove from cart|view cart|checkout|create order|confirm order)\b/i.test(userLower);
+            
+            if (explicitAction) {
+              const actionName = String(obj.action).toLowerCase();
+              const action = currentProfile.actions.find((a) => a.name.toLowerCase() === actionName);
             if (action) {
-              append({ sender: 'bot', text: `🔎 Executing action: ${action.name}...` });
               try {
                 logEvent('action_called', { name: action.name, source: 'tool_call' });
 
@@ -363,13 +354,27 @@ setIsTyping(true);
                   else data = await res.text();
                 }
 
-                // Present results in a friendly way
+                // Present results in a friendly way - interpret instead of just showing raw data
                 if (Array.isArray(data)) {
-                  append({ sender: 'bot', text: `Found ${data.length} results.` });
-                  const preview = data.slice(0, 5).map((it: any, i: number) => `- ${it.title || it.name || it.id || 'item'}${it.price ? ` (${it.price})` : ''}`).join('\n');
-                  append({ sender: 'bot', text: preview });
+                  if (data.length === 0) {
+                    append({ sender: 'bot', text: `No results found.` });
+                  } else {
+                    const preview = data.slice(0, 5).map((it: any, i: number) => {
+                      const name = it.title || it.name || it.id || 'item';
+                      const price = it.price ? ` - ${it.price}` : '';
+                      return `${i + 1}. ${name}${price}`;
+                    }).join('\n');
+                    const suffix = data.length > 5 ? `\n...and ${data.length - 5} more` : '';
+                    append({ sender: 'bot', text: `${preview}${suffix}` });
+                  }
                 } else if (typeof data === 'object' && data !== null) {
-                  append({ sender: 'bot', text: JSON.stringify(data, null, 2) });
+                  const entries = Object.entries(data).filter(([k]) => !k.startsWith('_') && k !== 'id');
+                  if (entries.length <= 3) {
+                    const kv = entries.map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join('\n');
+                    append({ sender: 'bot', text: kv });
+                  } else {
+                    append({ sender: 'bot', text: JSON.stringify(data, null, 2) });
+                  }
                 } else {
                   append({ sender: 'bot', text: String(data) });
                 }
@@ -381,6 +386,7 @@ setIsTyping(true);
                 handled = true;
               }
             }
+            }
           }
         }
       } catch (e) {
@@ -388,16 +394,19 @@ setIsTyping(true);
       }
 
       if (!handled) {
-        // If streaming was used, update the existing message instead of appending
+        // Strip any JSON from reply to avoid showing raw JSON to user
+        const cleanedReply = reply.replace(/^\s*\{[\s\S]*\}\s*$/, '').replace(/\{[\s\S]*\}/, '').trim();
+        const displayText = cleanedReply || reply;
+
         if (usedStreaming) {
-          const finalText = isGreetingIntent(content) ? `Hi! ${reply}` : reply;
+          const finalText = isGreetingIntent(content) ? `Hi! ${displayText}` : displayText;
           updateMessage(messageId, { text: finalText });
         } else {
           if (isGreetingIntent(content)) {
-            const combined = `Hi! ${reply}`;
+            const combined = `Hi! ${displayText}`;
             append({ sender: 'bot', text: combined });
           } else {
-            append({ sender: 'bot', text: reply });
+            append({ sender: 'bot', text: displayText });
           }
         }
       }
