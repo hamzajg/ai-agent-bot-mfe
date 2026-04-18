@@ -188,31 +188,29 @@ export function buildSystemPrompt(): string {
     lines.push('');
   }
 
-  if (profile.actions?.length) {
-    lines.push(`# Actions`);
-    for (const a of profile.actions) {
-      lines.push(`- ${a.name}: ${a.description || 'Execute an action'}`);
+  const localDataActions = profile.actions?.filter((a) => a.source === 'local') || [];
+  const apiActions = profile.actions?.filter((a) => a.source !== 'local') || [];
 
-      if (a.source === 'local') {
-        const localKey = a.localKey || a.name;
-        let localValue: any = null;
-        try {
-          const raw = localStorage.getItem(localKey);
-          if (raw) {
-            localValue = JSON.parse(raw);
-          }
-        } catch {}
-        if (localValue !== null) {
-          const preview = JSON.stringify(localValue, null, 2).slice(0, 500);
-          lines.push(`  Current Value:`);
-          lines.push(`${preview}`);
-        }
-      } else {
-        lines.push(`  Endpoint: ${a.method} ${a.endpoint}`);
-        if (a.params && Object.keys(a.params).length) {
-          lines.push(`  Params:`);
-          for (const [k, v] of Object.entries(a.params)) lines.push(`    - ${k}: ${v}`);
-        }
+  if (localDataActions.length) {
+    lines.push(`# Local Data (available for analysis)`);
+    lines.push('These keys contain user data (cart, preferences, history, etc.). YOU can READ and ANALYZE this data to provide personalized responses.');
+    lines.push('DO NOT just show the raw data to user - instead, interpret it and answer their question based on the data.');
+    lines.push('');
+    for (const a of localDataActions) {
+      lines.push(`- ${a.name}: ${a.description || 'Local data'}`);
+      lines.push(`  Key: ${a.localKey || a.name}`);
+    }
+    lines.push('');
+  }
+
+  if (apiActions.length) {
+    lines.push(`# API Actions`);
+    for (const a of apiActions) {
+      lines.push(`- ${a.name}: ${a.description || 'Execute an action'}`);
+      lines.push(`  Endpoint: ${a.method} ${a.endpoint}`);
+      if (a.params && Object.keys(a.params).length) {
+        lines.push(`  Params:`);
+        for (const [k, v] of Object.entries(a.params)) lines.push(`    - ${k}: ${v}`);
       }
     }
     lines.push('');

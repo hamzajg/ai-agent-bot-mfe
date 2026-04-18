@@ -23,13 +23,13 @@ function getLocalDataContext(): string {
       if (raw) {
         const value = JSON.parse(raw);
         lines.push(`## ${key}`);
-        lines.push(JSON.stringify(value, null, 2));
+        lines.push(JSON.stringify(value));
         lines.push('');
       }
     } catch {}
   }
 
-  return lines.join('\n');
+  return lines.join('\n').trim();
 }
 
 const ChatBotWidget: React.FC = () => {
