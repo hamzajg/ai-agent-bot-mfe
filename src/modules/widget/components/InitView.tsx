@@ -28,13 +28,25 @@ const defaultGuestProfile: GuestProfile = {
 };
 
 const InitView: React.FC<InitViewProps> = ({ onComplete, defaultProfile }) => {
-  const [mode, setMode] = useState<'choose' | 'guest'>(() => {
-    const gp = readGuestProfile();
-    return gp && gp.role ? 'guest' : 'choose';
-  });
+  const hasWebAppConfig = typeof window !== 'undefined' && !!(window as any).__AGENT_CONFIG?.role;
+  const [mode, setMode] = useState<'choose' | 'guest'>('choose');
 
   const handleUseWebApp = () => {
-    window.open('https://ai-agent-chatbot-58638.web.app/', '_blank');
+    const cfg = (window as any).__AGENT_CONFIG;
+    if (cfg && cfg.role) {
+      const webProfile: GuestProfile = {
+        role: cfg.role,
+        mission: cfg.mission || '',
+        responsibilities: cfg.responsibilities || [],
+        baseUrl: cfg.assetsBaseUrl || cfg.baseUrl,
+        routes: cfg.routes,
+        actions: cfg.actions,
+      };
+      writeGuestProfile(webProfile);
+      onComplete();
+    } else {
+      window.open('https://ai-agent-chatbot-58638.web.app/', '_blank');
+    }
   };
 
   const handleGuestSetup = () => {

@@ -9,8 +9,7 @@ import InitView from './InitView';
 
 function hasTable(text: string): boolean {
   const lines = text.split('\n');
-  const tableRows = lines.filter((l) => l.trim().startsWith('|') && l.trim().endsWith('|'));
-  return tableRows.length > 1;
+  return lines.some((l) => l.trim().startsWith('|') && l.trim().endsWith('|'));
 }
 
 function renderRichText(text: string, isBot: boolean): React.ReactNode {
@@ -23,18 +22,21 @@ function renderRichText(text: string, isBot: boolean): React.ReactNode {
 
   const flushTable = () => {
     if (tableBuffer.length === 0) return;
-    const rows = tableBuffer.filter((r) => r.trim().startsWith('|') && r.trim().endsWith('|'));
+    const rows = tableBuffer.filter((r) => {
+      const t = r.trim();
+      return t.startsWith('|') && t.endsWith('|') && !t.match(/\|[\s\-:]+\|/);
+    });
     if (rows.length > 0) {
       elements.push(
-        <div key={`table-${elements.length}`} className="overflow-x-auto mb-2 -mx-2 w-[calc(100%+16px)]" style={{ minWidth: '300px' }}>
-          <table className="text-xs border-collapse w-full whitespace-nowrap">
+        <div key={`table-${elements.length}`} className="overflow-x-auto mb-2 -mx-2 w-[calc(100%+16px)]">
+          <table className="text-xs border-collapse">
             <tbody>
               {rows.map((row, ri) => {
                 const cells = row.slice(1, -1).split('|').map((c) => c.trim());
                 return (
                   <tr key={ri} className={ri === 0 ? 'font-semibold bg-gray-100' : ''}>
                     {cells.map((cell, ci) => (
-                      <td key={ci} className={`px-2 py-1 border-b border-r border-gray-200 ${ri === 0 ? '' : ''}`}>
+                      <td key={ci} className="px-2 py-1 border-b border-r border-gray-200 whitespace-nowrap">
                         {cell}
                       </td>
                     ))}
@@ -145,6 +147,8 @@ function getLocalDataContext(): string {
 const ChatBotWidget: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [initialized, setInitialized] = useState(() => {
+    const saved = readChatHistory();
+    if (saved.length > 0) return true;
     const webAppConfig = localStorage.getItem('ai_agent_config');
     const guestRaw = localStorage.getItem('ai_agent_guest_profile');
     let guestProfile = null;
@@ -246,12 +250,18 @@ const ChatBotWidget: React.FC = () => {
     setInput('');
 
 try {
-setIsTyping(true);
+      setIsTyping(true);
+      const userLower = content.toLowerCase();
+      const isNavRequest = /^(navigate|go to|show me|take me|open|view|see|check out|go|visit)\s+/i.test(userLower);
+      
       const localContext = getLocalDataContext();
-
       const messageId = Date.now();
-      const usedStreaming = true;
-      append({ sender: 'bot', text: '', id: messageId });
+      const useStream = !isNavRequest;
+      const usedStreaming = useStream;
+      
+      if (useStream) {
+        append({ sender: 'bot', text: '', id: messageId });
+      }
 
       const streamContent = (chunk: string) => {
         setStreamText((prev) => {
@@ -268,6 +278,34 @@ setIsTyping(true);
       };
 
       const reply = await AIAgent.sendMessage(content, localContext, streamContent);
+
+      // For navigation requests, handle directly without waiting for conversational fallback
+      if (isNavRequest) {
+        const navMatch = reply.match(/\{[\s\S]*"navigate"\s*:\s*"([^"]+)"[\s\S]*\}/);
+        if (navMatch) {
+          const routeName = navMatch[1].trim();
+          let route = currentProfile.routes?.find((r) => r.name.toLowerCase() === routeName.toLowerCase());
+          if (!route) {
+            route = currentProfile.routes?.find((r) => r.path.toLowerCase() === `/${routeName.toLowerCase()}`);
+          }
+          if (route) {
+            if (usedStreaming) updateMessage(messageId, { text: `🧭 Navigating to ${route.name}...` });
+            else append({ sender: 'bot', text: `🧭 Navigating to ${route.name}...` });
+            try { window.location.href = route.path; } catch {}
+            setIsTyping(false);
+            setStreamText('');
+            return;
+          } else {
+            const directPath = routeName.startsWith('/') ? routeName : `/${routeName}`;
+            if (usedStreaming) updateMessage(messageId, { text: `🧭 Navigating to ${routeName}...` });
+            else append({ sender: 'bot', text: `🧭 Navigating to ${routeName}...` });
+            try { window.location.href = directPath; } catch {}
+            setIsTyping(false);
+            setStreamText('');
+            return;
+          }
+        }
+      }
 
       // Try to extract and parse a JSON action object from the reply
       let handled = false;
@@ -524,7 +562,7 @@ setIsTyping(true);
                         boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                         wordBreak: 'break-word',
                         overflowWrap: 'break-word',
-                        maxWidth: '280px',
+                        maxWidth: '300px',
                       }}
                     >
                       {m.text && renderRichText(m.text, m.sender === 'bot')}
