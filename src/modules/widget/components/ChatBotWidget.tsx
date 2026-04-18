@@ -7,9 +7,16 @@ import { agentProfile, getAgentProfile, buildSystemPrompt } from '../../agent/ag
 import { readGuestProfile, readChatHistory, writeChatHistory, appendChatMessage, clearChatHistory, ChatMessage } from '@shared/utils/storage';
 import InitView from './InitView';
 
+function hasTable(text: string): boolean {
+  const lines = text.split('\n');
+  const tableRows = lines.filter((l) => l.trim().startsWith('|') && l.trim().endsWith('|'));
+  return tableRows.length > 1;
+}
+
 function renderRichText(text: string, isBot: boolean): React.ReactNode {
   if (!text) return null;
 
+  const hasTables = hasTable(text);
   const lines = text.split('\n');
   const elements: React.ReactNode[] = [];
   let tableBuffer: string[] = [];
@@ -19,15 +26,15 @@ function renderRichText(text: string, isBot: boolean): React.ReactNode {
     const rows = tableBuffer.filter((r) => r.trim().startsWith('|') && r.trim().endsWith('|'));
     if (rows.length > 0) {
       elements.push(
-        <div key={`table-${elements.length}`} className="overflow-x-auto mb-2">
-          <table className="text-xs border-collapse w-full">
+        <div key={`table-${elements.length}`} className="overflow-x-auto mb-2 -mx-2 w-[calc(100%+16px)]" style={{ minWidth: '300px' }}>
+          <table className="text-xs border-collapse w-full whitespace-nowrap">
             <tbody>
               {rows.map((row, ri) => {
                 const cells = row.slice(1, -1).split('|').map((c) => c.trim());
                 return (
-                  <tr key={ri} className={ri === 0 ? 'font-semibold bg-gray-50' : ''}>
+                  <tr key={ri} className={ri === 0 ? 'font-semibold bg-gray-100' : ''}>
                     {cells.map((cell, ci) => (
-                      <td key={ci} className={`px-2 py-1 ${ri === 0 ? 'border-b' : ''} ${ci === 0 ? 'border-r' : ''}`}>
+                      <td key={ci} className={`px-2 py-1 border-b border-r border-gray-200 ${ri === 0 ? '' : ''}`}>
                         {cell}
                       </td>
                     ))}
@@ -398,9 +405,10 @@ try {
             bottom: 80,
             right: 24,
             zIndex: 2147483647,
-            width: 380,
-            height: 520,
+            width: 420,
+            height: 560,
             maxHeight: 'calc(100vh - 100px)',
+            maxWidth: '90vw',
             animation: 'slideUp 0.3s ease-out',
           }}
         >
