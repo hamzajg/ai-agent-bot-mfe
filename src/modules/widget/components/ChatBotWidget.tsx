@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Bot, Settings, Send, X, MessageCircle } from 'lucide-react';
 import { AIAgent } from '../../agent/AIAgent';
 import { logEvent, getSettings } from '@shared/utils/usage';
@@ -8,7 +8,8 @@ import { readGuestProfile, readChatHistory, writeChatHistory, appendChatMessage,
 import InitView from './InitView';
 
 function getLocalDataContext(): string {
-  const actions = currentProfile.actions || [];
+  const profile = getAgentProfile();
+  const actions = profile.actions || [];
   const localActions = actions.filter((a) => a.source === 'local');
   if (!localActions.length) return '';
 
@@ -52,7 +53,7 @@ const ChatBotWidget: React.FC = () => {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
 
-  const currentProfile = useMemo(() => getAgentProfile(), [isOpen]);
+  const currentProfile = getAgentProfile();
 
   useEffect(() => {
     const saved = readChatHistory();

@@ -5,7 +5,8 @@ import "@shared/styles/index.css"; // Tailwind CSS imported
 
 interface ChatBotOptions {
   rootId?: string;
-  assetsBaseUrl?: string; // optional override for static assets base
+  assetsBaseUrl?: string;
+  apiKey?: string; // optional API key for OpenAI
 }
 
 function setGlobals(options: ChatBotOptions) {
@@ -14,6 +15,12 @@ function setGlobals(options: ChatBotOptions) {
     const raw = localStorage.getItem('ai_agent_config');
     if (raw) (window as any).__AGENT_CONFIG = JSON.parse(raw);
   } catch {}
+
+  // Set API key from options
+  if (options.apiKey) {
+    const existing = (window as any).__AGENT_CONFIG || {};
+    (window as any).__AGENT_CONFIG = { ...existing, openaiApiKey: options.apiKey };
+  }
 
   // Load guest profile and merge into config
   try {
