@@ -233,31 +233,33 @@ export function buildSystemPrompt(): string {
   lines.push('');
 
   lines.push('# Response Formatting Guidelines');
-  lines.push('When responding with structured data, use these formats the UI can render:');
+  lines.push('When responding with structured data, format it directly in your response - DO NOT call an action.');
+  lines.push('Use these plain text formats (no JSON needed):');
   lines.push('');
   lines.push('## Tables');
-  lines.push('Use: | Header1 | Header2 |');
-  lines.push('     | Value1  | Value2  |');
+  lines.push('| Header1 | Header2 |');
+  lines.push('| Value1 | Value2 |');
   lines.push('');
   lines.push('## Bullet Lists');
-  lines.push('Use: - Item 1');
-  lines.push('     - Item 2');
+  lines.push('- Item 1');
+  lines.push('- Item 2');
   lines.push('');
   lines.push('## Numbered Lists');
-  lines.push('Use: 1. First item');
-  lines.push('     2. Second item');
+  lines.push('1. First item');
+  lines.push('2. Second item');
   lines.push('');
   lines.push('## Key-Value Pairs');
-  lines.push('Use: Name: value');
-  lines.push('     Price: $99');
+  lines.push('Name: value');
+  lines.push('Price: $99');
   lines.push('');
   lines.push('## Code');
-  lines.push('Use: `code here`');
+  lines.push('Use backticks: `code here`');
   lines.push('');
   lines.push('## Headings');
-  lines.push('Use: # Main Heading');
-  lines.push('     ## Sub Heading');
-  lines.push('DO NOT use markdown code blocks (```). Use plain text with the formats above.');
+  lines.push('# Main Heading');
+  lines.push('## Sub Heading');
+  lines.push('');
+  lines.push('IMPORTANT: Just format your response directly using these formats. DO NOT call actions like "Format as Table" - instead, respond with the properly formatted table directly.');
 
   return lines.join('\n');
 }
