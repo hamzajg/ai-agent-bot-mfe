@@ -249,13 +249,15 @@ try {
       {/* Floating Button - Enhanced with pulse animation */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white p-4 rounded-full shadow-xl transition-all duration-300 hover:scale-110 hover:shadow-2xl z-50"
+        className="fixed p-4 rounded-full shadow-xl transition-all duration-300 hover:scale-110 hover:shadow-2xl z-50"
         style={{
           position: 'fixed',
           bottom: 24,
           right: 24,
           zIndex: 2147483647,
+          background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
           boxShadow: '0 4px 20px rgba(37, 99, 235, 0.4)',
+          color: 'white',
         }}
       >
         {isOpen ? <X className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
@@ -320,18 +322,19 @@ try {
               </div>
 
               {/* Chat Messages - Improved bubbles */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ background: '#f8fafc' }}>
+              <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ background: '#f9fafb' }}>
                 {messages.map((m, idx) => (
                   <div
                     key={idx}
                     className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[85%] p-3 rounded-2xl text-sm whitespace-pre-line ${
+                      className="max-w-[85%] p-3 rounded-2xl text-sm whitespace-pre-line"
+                      style={
                         m.sender === 'user'
-                          ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-br-md'
-                          : 'bg-white text-gray-800 rounded-bl-md shadow-sm border border-gray-100'
-                      }`}
+                          ? { background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', color: 'white', borderBottomRightRadius: '4px' }
+                          : { background: '#ffffff', color: '#1f2937', borderBottomLeftRadius: '4px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }
+                      }
                     >
                       {m.text && <span>{m.text}</span>}
                       {m.link && (
@@ -353,11 +356,14 @@ try {
                 ))}
                 {isTyping && (
                   <div className="flex justify-start">
-                    <div className="bg-white rounded-2xl rounded-bl-md shadow-sm p-3">
+                    <div
+                      className="rounded-2xl rounded-bl-md shadow-sm p-3"
+                      style={{ background: '#ffffff', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
+                    >
                       <div className="flex space-x-1">
-                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        <span className="w-2 h-2 rounded-full animate-bounce" style={{ background: '#9ca3af', animationDelay: '0ms' }} />
+                        <span className="w-2 h-2 rounded-full animate-bounce" style={{ background: '#9ca3af', animationDelay: '150ms' }} />
+                        <span className="w-2 h-2 rounded-full animate-bounce" style={{ background: '#9ca3af', animationDelay: '300ms' }} />
                       </div>
                     </div>
                   </div>
