@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Bot, Settings } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Bot, Settings, Send, X, MessageCircle } from 'lucide-react';
 import { AIAgent } from '../../agent/AIAgent';
 import { logEvent, getSettings } from '@shared/utils/usage';
 import { Product } from '@shared/types';
@@ -246,20 +246,34 @@ try {
 
   return (
     <>
-      {/* Floating Button */}
+      {/* Floating Button - Enhanced with pulse animation */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg z-50 transition-transform hover:scale-105"
-        style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 2147483647 }}
+        className="fixed bottom-6 right-6 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white p-4 rounded-full shadow-xl transition-all duration-300 hover:scale-110 hover:shadow-2xl z-50"
+        style={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+          zIndex: 2147483647,
+          boxShadow: '0 4px 20px rgba(37, 99, 235, 0.4)',
+        }}
       >
-        <Bot className="w-6 h-6" />
+        {isOpen ? <X className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
       </button>
 
-      {/* Chat Window */}
+      {/* Chat Window - Slide in animation */}
       {isOpen && (
         <div
-          className="fixed bottom-20 right-6 w-96 h-[480px] bg-white border border-gray-300 rounded-2xl shadow-2xl flex flex-col z-50"
-          style={{ position: 'fixed', bottom: 80, right: 24, zIndex: 2147483647, width: 384, height: 480 }}
+          className="fixed bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden z-50 animate-slide-up"
+          style={{
+            bottom: 80,
+            right: 24,
+            zIndex: 2147483647,
+            width: 380,
+            height: 520,
+            maxHeight: 'calc(100vh - 100px)',
+            animation: 'slideUp 0.3s ease-out',
+          }}
         >
           {!initialized || showSettings ? (
             <InitView
@@ -271,56 +285,104 @@ try {
             />
           ) : (
             <>
-              {/* Header */}
-              <div className="flex justify-between items-center bg-blue-600 text-white px-4 py-2 rounded-t-2xl">
-                <h4 className="font-semibold">{agentProfile.role || 'AI Assistant'}</h4>
-                <div className="flex items-center space-x-2">
-                  <button onClick={() => setShowSettings(true)} className="text-white hover:text-gray-200">
+              {/* Header - Gradient with avatar */}
+              <div
+                className="flex items-center justify-between px-4 py-3 text-white"
+                style={{
+                  background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                }}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                    <Bot className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-sm">{agentProfile.role || 'AI Assistant'}</h4>
+                    <p className="text-xs text-white/70">Online</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => setShowSettings(true)}
+                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                    title="Settings"
+                  >
                     <Settings className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setIsOpen(false)} className="text-white hover:text-gray-200 text-lg">✕</button>
+                  <button
+                    onClick={() => setIsOpen(false)}
+                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                    title="Close"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
-              {/* Chat Messages */}
-              <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50">
+              {/* Chat Messages - Improved bubbles */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ background: '#f8fafc' }}>
                 {messages.map((m, idx) => (
-                  <div key={idx} className={`text-sm ${m.sender === 'user' ? 'text-white bg-blue-500 ml-auto' : 'text-gray-800 bg-white'} p-2 rounded-lg shadow-sm w-fit max-w-[90%] whitespace-pre-line`}>
-                    {m.text && <span>{m.text}</span>}
-                    {m.link && (
-                      <a
-                        href={m.link}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          window.location.href = m.link!;
-                        }}
-                        className="block mt-2 text-blue-600 hover:text-blue-800 underline cursor-pointer"
-                      >
-                        → {m.linkLabel || 'Click here'}
-                      </a>
-                    )}
+                  <div
+                    key={idx}
+                    className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[85%] p-3 rounded-2xl text-sm whitespace-pre-line ${
+                        m.sender === 'user'
+                          ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-br-md'
+                          : 'bg-white text-gray-800 rounded-bl-md shadow-sm border border-gray-100'
+                      }`}
+                    >
+                      {m.text && <span>{m.text}</span>}
+                      {m.link && (
+                        <a
+                          href={m.link}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            window.location.href = m.link!;
+                          }}
+                          className={`block mt-2 underline cursor-pointer ${
+                            m.sender === 'user' ? 'text-blue-100 hover:text-white' : 'text-blue-600 hover:text-blue-800'
+                          }`}
+                        >
+                          → {m.linkLabel || 'Click here'}
+                        </a>
+                      )}
+                    </div>
                   </div>
                 ))}
                 {isTyping && (
-                  <div className="text-sm text-gray-800 bg-white p-2 rounded-lg shadow-sm w-fit">
-                    <span className="animate-pulse">Assistant is typing…</span>
+                  <div className="flex justify-start">
+                    <div className="bg-white rounded-2xl rounded-bl-md shadow-sm p-3">
+                      <div className="flex space-x-1">
+                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Input Area */}
-              <div className="border-t border-gray-200 p-3 bg-white flex">
-                <input
-                  type="text"
-                  placeholder="Type your message..."
-                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                />
-                <button onClick={handleSend} className="ml-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
-                  Send
-                </button>
+              {/* Input Area - Improved styling */}
+              <div className="border-t border-gray-100 p-3 bg-white">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    placeholder="Type a message..."
+                    className="flex-1 bg-gray-50 border-0 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                  />
+                  <button
+                    onClick={handleSend}
+                    disabled={!input.trim()}
+                    className="p-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-xl transition-colors"
+                  >
+                    <Send className="w-4 h-4 text-white" />
+                  </button>
+                </div>
               </div>
             </>
           )}
