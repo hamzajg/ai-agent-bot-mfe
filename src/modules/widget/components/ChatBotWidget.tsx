@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Bot, Settings, Send, X, MessageCircle } from 'lucide-react';
 import { AIAgent } from '../../agent/AIAgent';
 import { logEvent, getSettings } from '@shared/utils/usage';
 import { Product } from '@shared/types';
-import { agentProfile, buildSystemPrompt } from '../../agent/agentProfile';
+import { agentProfile, getAgentProfile, buildSystemPrompt } from '../../agent/agentProfile';
 import { readGuestProfile, readChatHistory, writeChatHistory, appendChatMessage, clearChatHistory, ChatMessage } from '@shared/utils/storage';
 import InitView from './InitView';
 
 function getLocalDataContext(): string {
-  const actions = agentProfile.actions || [];
+  const actions = currentProfile.actions || [];
   const localActions = actions.filter((a) => a.source === 'local');
   if (!localActions.length) return '';
 
@@ -33,7 +33,17 @@ function getLocalDataContext(): string {
 
 const ChatBotWidget: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [initialized, setInitialized] = useState(false);
+  const [initialized, setInitialized] = useState(() => {
+    const webAppConfig = localStorage.getItem('ai_agent_config');
+    const guestRaw = localStorage.getItem('ai_agent_guest_profile');
+    let guestProfile = null;
+    if (guestRaw) {
+      try {
+        guestProfile = JSON.parse(guestRaw);
+      } catch {}
+    }
+    return !!(webAppConfig || (guestProfile && guestProfile.role));
+  });
   const [showSettings, setShowSettings] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     const saved = readChatHistory();
@@ -42,6 +52,8 @@ const ChatBotWidget: React.FC = () => {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
 
+  const currentProfile = useMemo(() => getAgentProfile(), [isOpen]);
+
   useEffect(() => {
     const saved = readChatHistory();
     if (saved.length > 0) {
@@ -49,13 +61,7 @@ const ChatBotWidget: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    const webAppConfig = localStorage.getItem('ai_agent_config');
-    const guestProfile = readGuestProfile();
-    if (webAppConfig || guestProfile) {
-      setInitialized(true);
-    }
-  }, []);
+  
 
   const handleInitComplete = () => {
     setInitialized(true);
@@ -119,7 +125,7 @@ try {
           // Handle navigation
           if (obj && obj.navigate) {
             const routeName = String(obj.navigate);
-            const route = agentProfile.routes?.find((r) => r.name.toLowerCase() === routeName.toLowerCase());
+            const route = currentProfile.routes?.find((r) => r.name.toLowerCase() === routeName.toLowerCase());
             if (route) {
               let path = route.path;
               const params = obj.params || {};
@@ -159,7 +165,7 @@ try {
             const actionName = String(obj.action).toLowerCase();
 
             // find matching action from agent profile
-            const action = agentProfile.actions.find((a) => a.name.toLowerCase() === actionName);
+            const action = currentProfile.actions.find((a) => a.name.toLowerCase() === actionName);
             if (action) {
               append({ sender: 'bot', text: `🔎 Executing action: ${action.name}...` });
               try {
@@ -182,7 +188,7 @@ try {
                   }
                 } else {
                   // Handle API action
-                  const base = (agentProfile.baseUrl || '').replace(/\/$/, '');
+                  const base = (currentProfile.baseUrl || '').replace(/\/$/, '');
                   const endpoint = action.endpoint || '';
                   const url = endpoint.startsWith('http') ? endpoint : `${base}${endpoint}`;
 
@@ -248,7 +254,9 @@ try {
     <>
       {/* Floating Button - Enhanced with pulse animation */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          setIsOpen(!isOpen);
+        }}
         className="fixed p-4 rounded-full shadow-xl transition-all duration-300 hover:scale-110 hover:shadow-2xl z-50"
         style={{
           position: 'fixed',
@@ -284,6 +292,7 @@ try {
                 setShowSettings(false);
               }}
               defaultProfile={readGuestProfile()}
+              
             />
           ) : (
             <>
@@ -299,7 +308,7 @@ try {
                     <Bot className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-sm">{agentProfile.role || 'AI Assistant'}</h4>
+                    <h4 className="font-semibold text-sm">{currentProfile.role || 'AI Assistant'}</h4>
                     <p className="text-xs text-white/70">Online</p>
                   </div>
                 </div>

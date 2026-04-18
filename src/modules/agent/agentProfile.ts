@@ -69,30 +69,33 @@ const defaultActions: Action[] = [
 const env = import.meta.env as any;
 const adminCfg = (typeof window !== 'undefined' && (window as any).__AGENT_CONFIG) || {};
 
-const guestProfile = (() => {
+function getGuestProfile() {
   try {
     if (typeof window !== 'undefined') {
       return readGuestProfile();
     }
   } catch {}
   return null;
-})();
+}
 
 function getRole(): string {
   if (adminCfg.role) return adminCfg.role;
-  if (guestProfile?.role) return guestProfile.role;
+  const gp = getGuestProfile();
+  if (gp?.role) return gp.role;
   return env.VITE_AGENT_ROLE || 'AI Shopping Assistant';
 }
 
 function getMission(): string {
   if (adminCfg.mission) return adminCfg.mission;
-  if (guestProfile?.mission) return guestProfile.mission;
+  const gp = getGuestProfile();
+  if (gp?.mission) return gp.mission;
   return env.VITE_AGENT_MISSION || 'Help users browse products, answer store-related questions, and perform lookups while being concise, friendly, and accurate.';
 }
 
 function getResponsibilities(): string[] {
   if (Array.isArray(adminCfg.responsibilities) && adminCfg.responsibilities.length) return adminCfg.responsibilities;
-  if (guestProfile?.responsibilities?.length) return guestProfile.responsibilities;
+  const gp = getGuestProfile();
+  if (gp?.responsibilities?.length) return gp.responsibilities;
   const envResp = parseJsonArray<string>(env.VITE_AGENT_RESPONSIBILITIES);
   if (envResp?.length) return envResp;
   return [
@@ -108,29 +111,37 @@ function getResponsibilities(): string[] {
 
 function getBaseUrl(): string {
   if (adminCfg.assetsBaseUrl) return adminCfg.assetsBaseUrl;
-  if (guestProfile?.baseUrl) return guestProfile.baseUrl;
+  const gp = getGuestProfile();
+  if (gp?.baseUrl) return gp.baseUrl;
   return env.VITE_ASSETS_BASE_URL || '';
 }
 
 function getRoutes(): RouteConfig[] {
   if (adminCfg.routes?.length) return adminCfg.routes as RouteConfig[];
-  const hasGuestRoutes = guestProfile && 'routes' in guestProfile && Array.isArray(guestProfile.routes);
-  if (hasGuestRoutes) return guestProfile.routes;
+  const gp = getGuestProfile();
+  const hasGuestRoutes = gp && 'routes' in gp && Array.isArray(gp.routes);
+  if (hasGuestRoutes) return gp.routes;
   return [];
 }
 
-const role = getRole();
-const mission = getMission();
-const responsibilities = getResponsibilities();
-const baseUrl = getBaseUrl();
-const routes = getRoutes();
+export function getAgentProfile() {
+  return {
+    role: getRole(),
+    mission: getMission(),
+    responsibilities: getResponsibilities(),
+    baseUrl: getBaseUrl(),
+    routes: getRoutes(),
+    actions: getActions(),
+  };
+}
 
-const actions: Action[] = (() => {
+function getActions(): Action[] {
   if (adminCfg.actions?.length) return adminCfg.actions as Action[];
 
-  const hasGuestActions = guestProfile && 'actions' in guestProfile && Array.isArray(guestProfile.actions);
+  const gp = getGuestProfile();
+  const hasGuestActions = gp && 'actions' in gp && Array.isArray(gp.actions);
   if (hasGuestActions) {
-    return guestProfile.actions.map((a: ActionConfig) => ({
+    return gp.actions.map((a: ActionConfig) => ({
       name: a.name,
       description: a.description || '',
       endpoint: a.endpoint,
@@ -144,41 +155,42 @@ const actions: Action[] = (() => {
   const envActions = parseJsonArray<Action>(env.VITE_AGENT_ACTIONS_JSON);
   if (envActions?.length) return envActions;
   return [];
-})();
+}
 
 export const agentProfile = {
-  role,
-  mission,
-  responsibilities,
-  baseUrl,
-  routes,
-  actions,
+  get role() { return getRole(); },
+  get mission() { return getMission(); },
+  get responsibilities() { return getResponsibilities(); },
+  get baseUrl() { return getBaseUrl(); },
+  get routes() { return getRoutes(); },
+  get actions() { return getActions(); },
 } as const;
 
 export function buildSystemPrompt(): string {
+  const profile = getAgentProfile();
   const lines: string[] = [];
   lines.push(`# Role`);
-  lines.push(agentProfile.role);
+  lines.push(profile.role);
   lines.push('');
   lines.push(`# Mission`);
-  lines.push(agentProfile.mission);
+  lines.push(profile.mission);
   lines.push('');
   lines.push(`# Responsibilities`);
-  for (const r of agentProfile.responsibilities) lines.push(`- ${r}`);
+  for (const r of profile.responsibilities) lines.push(`- ${r}`);
   lines.push('');
 
-  if (agentProfile.routes?.length) {
+  if (profile.routes?.length) {
     lines.push(`# Navigation Routes`);
-    for (const route of agentProfile.routes) {
+    for (const route of profile.routes) {
       lines.push(`- ${route.name}: ${route.path}`);
       if (route.description) lines.push(`  ${route.description}`);
     }
     lines.push('');
   }
 
-  if (agentProfile.actions?.length) {
+  if (profile.actions?.length) {
     lines.push(`# Actions`);
-    for (const a of agentProfile.actions) {
+    for (const a of profile.actions) {
       lines.push(`- ${a.name}: ${a.description || 'Execute an action'}`);
 
       if (a.source === 'local') {
@@ -206,7 +218,7 @@ export function buildSystemPrompt(): string {
     lines.push('');
   }
 
-  if (agentProfile.routes?.length) {
+  if (profile.routes?.length) {
     lines.push(
       'When the user wants to navigate to a page, respond with ONLY a JSON object for navigation:'
     );

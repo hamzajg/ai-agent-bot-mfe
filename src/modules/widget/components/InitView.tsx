@@ -28,7 +28,14 @@ const defaultGuestProfile: GuestProfile = {
 };
 
 const InitView: React.FC<InitViewProps> = ({ onComplete, defaultProfile }) => {
-  const [mode, setMode] = useState<'choose' | 'guest'>(defaultProfile ? 'guest' : 'choose');
+  const [mode, setMode] = useState<'choose' | 'guest'>(() => {
+    const gp = readGuestProfile();
+    return gp && gp.role ? 'guest' : 'choose';
+  });
+
+  const handleUseWebApp = () => {
+    window.open('https://ai-agent-chatbot-58638.web.app/', '_blank');
+  };
 
   const handleGuestSetup = () => {
     setMode('guest');
@@ -39,12 +46,13 @@ const InitView: React.FC<InitViewProps> = ({ onComplete, defaultProfile }) => {
     onComplete();
   };
 
-  const handleUseWebApp = () => {
-    window.open('https://ai-agent-chatbot-58638.web.app/', '_blank');
+  const getProfile = () => {
+    const gp = readGuestProfile();
+    return gp && gp.role ? gp : defaultGuestProfile;
   };
 
   if (mode === 'guest') {
-    return <GuestProfileForm defaultProfile={defaultProfile || defaultGuestProfile} onSave={handleSaveGuest} onCancel={defaultProfile ? onComplete : () => setMode('choose')} />;
+    return <GuestProfileForm defaultProfile={getProfile()} onSave={handleSaveGuest} onCancel={() => setMode('choose')} />;
   }
 
   return (
