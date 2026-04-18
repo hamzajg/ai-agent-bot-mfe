@@ -1,5 +1,5 @@
 import { Action } from '../../shared/types';
-import { readJSON } from '../../shared/utils/storage';
+import { readJSON, readGuestProfile, GuestProfile, RouteConfig, ActionConfig } from '../../shared/utils/storage';
 
 function parseJsonArray<T>(raw?: string): T[] | undefined {
   if (!raw) return undefined;
@@ -69,15 +69,33 @@ const defaultActions: Action[] = [
 const env = import.meta.env as any;
 const adminCfg = (typeof window !== 'undefined' && (window as any).__AGENT_CONFIG) || {};
 
-const role = adminCfg.role || env.VITE_AGENT_ROLE || 'AI Shopping Assistant';
-const mission =
-  adminCfg.mission ||
-  env.VITE_AGENT_MISSION ||
-  'Help users browse products, answer store-related questions, and perform lookups while being concise, friendly, and accurate.';
+const guestProfile = (() => {
+  try {
+    if (typeof window !== 'undefined') {
+      return readGuestProfile();
+    }
+  } catch {}
+  return null;
+})();
 
-const responsibilities =
-  (Array.isArray(adminCfg.responsibilities) ? adminCfg.responsibilities : undefined) ||
-  parseJsonArray<string>(env.VITE_AGENT_RESPONSIBILITIES) || [
+function getRole(): string {
+  if (adminCfg.role) return adminCfg.role;
+  if (guestProfile?.role) return guestProfile.role;
+  return env.VITE_AGENT_ROLE || 'AI Shopping Assistant';
+}
+
+function getMission(): string {
+  if (adminCfg.mission) return adminCfg.mission;
+  if (guestProfile?.mission) return guestProfile.mission;
+  return env.VITE_AGENT_MISSION || 'Help users browse products, answer store-related questions, and perform lookups while being concise, friendly, and accurate.';
+}
+
+function getResponsibilities(): string[] {
+  if (Array.isArray(adminCfg.responsibilities) && adminCfg.responsibilities.length) return adminCfg.responsibilities;
+  if (guestProfile?.responsibilities?.length) return guestProfile.responsibilities;
+  const envResp = parseJsonArray<string>(env.VITE_AGENT_RESPONSIBILITIES);
+  if (envResp?.length) return envResp;
+  return [
     'Answer general store and product questions.',
     'Assist with basic shopping flows.',
     'When asked to find/search/lookup a product, request or extract the query and use the Products Search action.',
@@ -86,16 +104,54 @@ const responsibilities =
     'Never invent data; if unknown, ask a clarifying question.',
     'Keep responses short and actionable.',
   ];
+}
 
-const actions =
-  (Array.isArray(adminCfg.actions) ? (adminCfg.actions as Action[]) : undefined) ||
-  parseJsonArray<Action>(env.VITE_AGENT_ACTIONS_JSON) ||
-  defaultActions;
+function getBaseUrl(): string {
+  if (adminCfg.assetsBaseUrl) return adminCfg.assetsBaseUrl;
+  if (guestProfile?.baseUrl) return guestProfile.baseUrl;
+  return env.VITE_ASSETS_BASE_URL || '';
+}
+
+function getRoutes(): RouteConfig[] {
+  if (adminCfg.routes?.length) return adminCfg.routes as RouteConfig[];
+  const hasGuestRoutes = guestProfile && 'routes' in guestProfile && Array.isArray(guestProfile.routes);
+  if (hasGuestRoutes) return guestProfile.routes;
+  return [];
+}
+
+const role = getRole();
+const mission = getMission();
+const responsibilities = getResponsibilities();
+const baseUrl = getBaseUrl();
+const routes = getRoutes();
+
+const actions: Action[] = (() => {
+  if (adminCfg.actions?.length) return adminCfg.actions as Action[];
+
+  const hasGuestActions = guestProfile && 'actions' in guestProfile && Array.isArray(guestProfile.actions);
+  if (hasGuestActions) {
+    return guestProfile.actions.map((a: ActionConfig) => ({
+      name: a.name,
+      description: a.description || '',
+      endpoint: a.endpoint,
+      method: a.method,
+      params: a.params?.reduce((acc, p) => ({ ...acc, [p.name]: p.description || p.name }), {} as Record<string, string>),
+      source: a.source,
+      localKey: a.localKey,
+    }));
+  }
+
+  const envActions = parseJsonArray<Action>(env.VITE_AGENT_ACTIONS_JSON);
+  if (envActions?.length) return envActions;
+  return [];
+})();
 
 export const agentProfile = {
   role,
   mission,
   responsibilities,
+  baseUrl,
+  routes,
   actions,
 } as const;
 
@@ -110,25 +166,59 @@ export function buildSystemPrompt(): string {
   lines.push(`# Responsibilities`);
   for (const r of agentProfile.responsibilities) lines.push(`- ${r}`);
   lines.push('');
-  lines.push(`# Actions`);
-  for (const a of agentProfile.actions) {
-    lines.push(`- ${a.name}: ${a.description}`);
-    lines.push(`  Endpoint: ${a.method} ${a.endpoint}`);
-    if (a.params && Object.keys(a.params).length) {
-      lines.push(`  Params:`);
-      for (const [k, v] of Object.entries(a.params)) lines.push(`    - ${k}: ${v}`);
+
+  if (agentProfile.routes?.length) {
+    lines.push(`# Navigation Routes`);
+    for (const route of agentProfile.routes) {
+      lines.push(`- ${route.name}: ${route.path}`);
+      if (route.description) lines.push(`  ${route.description}`);
     }
+    lines.push('');
   }
-  lines.push('');
+
+  if (agentProfile.actions?.length) {
+    lines.push(`# Actions`);
+    for (const a of agentProfile.actions) {
+      lines.push(`- ${a.name}: ${a.description || 'Execute an action'}`);
+
+      if (a.source === 'local') {
+        const localKey = a.localKey || a.name;
+        let localValue: any = null;
+        try {
+          const raw = localStorage.getItem(localKey);
+          if (raw) {
+            localValue = JSON.parse(raw);
+          }
+        } catch {}
+        if (localValue !== null) {
+          const preview = JSON.stringify(localValue, null, 2).slice(0, 500);
+          lines.push(`  Current Value:`);
+          lines.push(`${preview}`);
+        }
+      } else {
+        lines.push(`  Endpoint: ${a.method} ${a.endpoint}`);
+        if (a.params && Object.keys(a.params).length) {
+          lines.push(`  Params:`);
+          for (const [k, v] of Object.entries(a.params)) lines.push(`    - ${k}: ${v}`);
+        }
+      }
+    }
+    lines.push('');
+  }
+
+  if (agentProfile.routes?.length) {
+    lines.push(
+      'When the user wants to navigate to a page, respond with ONLY a JSON object for navigation:'
+    );
+    lines.push('{"navigate":"<Route Name>","params":{"<key>":"<value>"}}');
+    lines.push('Example: {"navigate":"Product Details","params":{"id":"123"}}');
+    lines.push('');
+  }
+
   lines.push(
-    'Behavior: Prefer concise answers. Ask for clarification if the user request is ambiguous.'
-  );
-  lines.push(
-    'When you want the client to execute an action, respond with ONLY a single JSON object on one line, no extra text, in the following shape:'
+    'When you want the client to execute an action, respond with ONLY a single JSON object on one line, no extra text:'
   );
   lines.push('{"action":"<Action Name>","params":{"<key>":"<value>"}}');
-  lines.push(
-    'Example: {"action":"Products Search","params":{"text":"wireless headphones"}}'
-  );
+  lines.push('Example: {"action":"Products Search","params":{"text":"wireless headphones"}}');
   return lines.join('\n');
 }

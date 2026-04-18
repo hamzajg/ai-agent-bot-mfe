@@ -1,12 +1,20 @@
+import { buildSystemPrompt } from "../agentProfile";
+
 export const ollamaProvider = {
-  async send(message: string): Promise<string> {
+  async send(message: string, localContext?: string): Promise<string> {
     const cfg = (typeof window !== 'undefined' && (window as any).__AGENT_CONFIG) || {};
     const baseUrl = (cfg.ollamaUrl as string) || 'http://localhost:11434';
     const model = (cfg.ollamaModel as string) || (import.meta.env.VITE_OLLAMA_MODEL as string) || 'llama2';
+
+    let systemPrompt = buildSystemPrompt();
+    if (localContext) {
+      systemPrompt += '\n\n' + localContext;
+    }
+
     const res = await fetch(`${baseUrl.replace(/\/$/, '')}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, prompt: message }),
+      body: JSON.stringify({ model, prompt: message, system: systemPrompt }),
     });
 
     const reader = res.body?.getReader();

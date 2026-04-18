@@ -1,10 +1,21 @@
+import { buildSystemPrompt } from "../agentProfile";
+
 export const geminiProvider = {
-  async send(message: string): Promise<string> {
+  async send(message: string, localContext?: string): Promise<string> {
     const apiKey = ((typeof window !== 'undefined' && (window as any).__AGENT_CONFIG?.geminiApiKey) || import.meta.env.VITE_GEMINI_API_KEY) as string;
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}` , {
+
+    let systemPrompt = buildSystemPrompt();
+    if (localContext) {
+      systemPrompt += '\n\n' + localContext;
+    }
+
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}` , {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: message }] }] }),
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ parts: [{ text: message }] }],
+      }),
     });
 
     const data = await res.json();

@@ -1,20 +1,73 @@
-import React, { useState } from 'react';
-import { Bot } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bot, Settings } from 'lucide-react';
 import { AIAgent } from '../../agent/AIAgent';
 import { logEvent, getSettings } from '@shared/utils/usage';
 import { Product } from '@shared/types';
-import { agentProfile } from '../../agent/agentProfile';
+import { agentProfile, buildSystemPrompt } from '../../agent/agentProfile';
+import { readGuestProfile, readChatHistory, writeChatHistory, appendChatMessage, clearChatHistory, ChatMessage } from '@shared/utils/storage';
+import InitView from './InitView';
+
+function getLocalDataContext(): string {
+  const actions = agentProfile.actions || [];
+  const localActions = actions.filter((a) => a.source === 'local');
+  if (!localActions.length) return '';
+
+  const lines: string[] = [];
+  lines.push('# Local Data (from browser storage)');
+
+  for (const action of localActions) {
+    const key = action.localKey || action.name;
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const value = JSON.parse(raw);
+        lines.push(`## ${key}`);
+        lines.push(JSON.stringify(value, null, 2));
+        lines.push('');
+      }
+    } catch {}
+  }
+
+  return lines.join('\n');
+}
 
 const ChatBotWidget: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<
-    { sender: 'user' | 'bot'; text?: string; products?: Product[] }[]
-  >([{ sender: 'bot', text: '👋 Hi! How can I help you today?' }]);
+  const [initialized, setInitialized] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    const saved = readChatHistory();
+    return saved.length > 0 ? saved : [{ sender: 'bot', text: '👋 Hi! How can I help you today?' }];
+  });
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
 
-  const append = (m: { sender: 'user' | 'bot'; text?: string; products?: Product[] }) =>
-    setMessages((prev) => [...prev, m]);
+  useEffect(() => {
+    const saved = readChatHistory();
+    if (saved.length > 0) {
+      setMessages(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    const webAppConfig = localStorage.getItem('ai_agent_config');
+    const guestProfile = readGuestProfile();
+    if (webAppConfig || guestProfile) {
+      setInitialized(true);
+    }
+  }, []);
+
+  const handleInitComplete = () => {
+    setInitialized(true);
+  };
+
+  const append = (m: ChatMessage) => {
+    setMessages((prev) => {
+      const updated = [...prev, m];
+      writeChatHistory(updated);
+      return updated;
+    });
+  };
 
   const getProductUrl = (p: Product) => {
     const tpl = (window as any).__PRODUCT_URL_TEMPLATE || '/products/{id}';
@@ -51,17 +104,58 @@ const ChatBotWidget: React.FC = () => {
     append({ sender: 'user', text: content });
     setInput('');
 
-    try {
+try {
       setIsTyping(true);
-      const reply = await AIAgent.sendMessage(content);
+      const localContext = getLocalDataContext();
+      const reply = await AIAgent.sendMessage(content, localContext);
 
       // Try to extract and parse a JSON action object from the reply
       let handled = false;
       try {
         const jsonMatch = reply.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          const obj = JSON.parse(jsonMatch[0]) as { action?: string; params?: Record<string, any> };
-          if (obj && obj.action) {
+          const obj = JSON.parse(jsonMatch[0]) as { action?: string; navigate?: string; params?: Record<string, any> };
+
+          // Handle navigation
+          if (obj && obj.navigate) {
+            const routeName = String(obj.navigate);
+            const route = agentProfile.routes?.find((r) => r.name.toLowerCase() === routeName.toLowerCase());
+            if (route) {
+              let path = route.path;
+              const params = obj.params || {};
+              for (const [key, value] of Object.entries(params)) {
+                path = path.replace(`{${key}}`, String(value));
+              }
+
+              // Check if user explicitly asked for navigation
+              const userLower = content.toLowerCase();
+              const explicitNav = /^(navigate|go to|show me|take me|open|view product|see product|check out)\b/i.test(userLower);
+
+              if (explicitNav) {
+                append({ sender: 'bot', text: `🧭 Navigating to ${route.name}...` });
+                try {
+                  window.location.href = path;
+                  handled = true;
+                } catch (err) {
+                  append({ sender: 'bot', text: `Navigation failed: ${String(err)}` });
+                  handled = true;
+                }
+              } else {
+                // Show clickable link instead of auto-navigate
+                append({
+                  sender: 'bot',
+                  text: `Would you like to ${route.name.toLowerCase()}?`,
+                  action: 'navigate',
+                  link: path,
+                  linkLabel: route.name,
+                });
+                handled = true;
+              }
+            }
+          }
+
+          // Handle action
+          if (!handled && obj && obj.action) {
             const actionName = String(obj.action).toLowerCase();
 
             // find matching action from agent profile
@@ -71,33 +165,47 @@ const ChatBotWidget: React.FC = () => {
               try {
                 logEvent('action_called', { name: action.name, source: 'tool_call' });
 
-                // Build URL
-                const cfg = (window as any).__AGENT_CONFIG || {};
-                const base = (cfg.assetsBaseUrl || '').replace(/\/$/, '');
-                const endpoint = action.endpoint || '';
-                const url = endpoint.startsWith('http') ? endpoint : `${base}${endpoint}`;
-
-                let fetchUrl = url;
-                const params = obj.params || {};
-                let fetchOptions: RequestInit = { method: (action.method || 'GET').toUpperCase() };
-                if ((fetchOptions.method || 'GET') === 'GET') {
-                  const qs = new URLSearchParams();
-                  for (const [k, v] of Object.entries(params || {})) qs.set(k, String(v));
-                  fetchUrl = qs.toString() ? `${fetchUrl}${fetchUrl.includes('?') ? '&' : '?'}${qs.toString()}` : fetchUrl;
-                } else {
-                  fetchOptions = { ...fetchOptions, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) };
-                }
-
-                const res = await fetch(fetchUrl, fetchOptions);
                 let data: any = null;
-                const ctype = res.headers.get('content-type') || '';
-                if (ctype.includes('application/json')) data = await res.json();
-                else data = await res.text();
+
+                // Handle local storage action
+                if (action.source === 'local' || action.localKey) {
+                  const localKey = action.localKey || action.name.toLowerCase().replace(/\s+/g, '_');
+                  const raw = localStorage.getItem(localKey);
+                  if (raw) {
+                    try {
+                      data = JSON.parse(raw);
+                    } catch {
+                      data = raw;
+                    }
+                  } else {
+                    data = null;
+                  }
+                } else {
+                  // Handle API action
+                  const base = (agentProfile.baseUrl || '').replace(/\/$/, '');
+                  const endpoint = action.endpoint || '';
+                  const url = endpoint.startsWith('http') ? endpoint : `${base}${endpoint}`;
+
+                  let fetchUrl = url;
+                  const params = obj.params || {};
+                  let fetchOptions: RequestInit = { method: (action.method || 'GET').toUpperCase() };
+                  if ((fetchOptions.method || 'GET') === 'GET') {
+                    const qs = new URLSearchParams();
+                    for (const [k, v] of Object.entries(params || {})) qs.set(k, String(v));
+                    fetchUrl = qs.toString() ? `${fetchUrl}${fetchUrl.includes('?') ? '&' : '?'}${qs.toString()}` : fetchUrl;
+                  } else {
+                    fetchOptions = { ...fetchOptions, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) };
+                  }
+
+                  const res = await fetch(fetchUrl, fetchOptions);
+                  const ctype = res.headers.get('content-type') || '';
+                  if (ctype.includes('application/json')) data = await res.json();
+                  else data = await res.text();
+                }
 
                 // Present results in a friendly way
                 if (Array.isArray(data)) {
                   append({ sender: 'bot', text: `Found ${data.length} results.` });
-                  // show first few items if they have title/description
                   const preview = data.slice(0, 5).map((it: any, i: number) => `- ${it.title || it.name || it.id || 'item'}${it.price ? ` (${it.price})` : ''}`).join('\n');
                   append({ sender: 'bot', text: preview });
                 } else if (typeof data === 'object' && data !== null) {
@@ -153,40 +261,69 @@ const ChatBotWidget: React.FC = () => {
           className="fixed bottom-20 right-6 w-96 h-[480px] bg-white border border-gray-300 rounded-2xl shadow-2xl flex flex-col z-50"
           style={{ position: 'fixed', bottom: 80, right: 24, zIndex: 2147483647, width: 384, height: 480 }}
         >
-          {/* Header */}
-          <div className="flex justify-between items-center bg-blue-600 text-white px-4 py-2 rounded-t-2xl">
-            <h4 className="font-semibold">{agentProfile.role}</h4>
-            <button onClick={() => setIsOpen(false)} className="text-white text-lg">✕</button>
-          </div>
-
-          {/* Chat Messages */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50">
-            {messages.map((m, idx) => (
-              <div key={idx} className={`text-sm ${m.sender === 'user' ? 'text-white bg-blue-500 ml-auto' : 'text-gray-800 bg-white'} p-2 rounded-lg shadow-sm w-fit max-w-[90%] whitespace-pre-line`}>
-                {m.text && <span>{m.text}</span>}
-              </div>
-            ))}
-            {isTyping && (
-              <div className="text-sm text-gray-800 bg-white p-2 rounded-lg shadow-sm w-fit">
-                <span className="animate-pulse">Assistant is typing…</span>
-              </div>
-            )}
-          </div>
-
-          {/* Input Area */}
-          <div className="border-t border-gray-200 p-3 bg-white flex">
-            <input
-              type="text"
-              placeholder="Type your message..."
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          {!initialized || showSettings ? (
+            <InitView
+              onComplete={() => {
+                setInitialized(true);
+                setShowSettings(false);
+              }}
+              defaultProfile={readGuestProfile()}
             />
-            <button onClick={handleSend} className="ml-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
-              Send
-            </button>
-          </div>
+          ) : (
+            <>
+              {/* Header */}
+              <div className="flex justify-between items-center bg-blue-600 text-white px-4 py-2 rounded-t-2xl">
+                <h4 className="font-semibold">{agentProfile.role || 'AI Assistant'}</h4>
+                <div className="flex items-center space-x-2">
+                  <button onClick={() => setShowSettings(true)} className="text-white hover:text-gray-200">
+                    <Settings className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setIsOpen(false)} className="text-white hover:text-gray-200 text-lg">✕</button>
+                </div>
+              </div>
+
+              {/* Chat Messages */}
+              <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50">
+                {messages.map((m, idx) => (
+                  <div key={idx} className={`text-sm ${m.sender === 'user' ? 'text-white bg-blue-500 ml-auto' : 'text-gray-800 bg-white'} p-2 rounded-lg shadow-sm w-fit max-w-[90%] whitespace-pre-line`}>
+                    {m.text && <span>{m.text}</span>}
+                    {m.link && (
+                      <a
+                        href={m.link}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          window.location.href = m.link!;
+                        }}
+                        className="block mt-2 text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                      >
+                        → {m.linkLabel || 'Click here'}
+                      </a>
+                    )}
+                  </div>
+                ))}
+                {isTyping && (
+                  <div className="text-sm text-gray-800 bg-white p-2 rounded-lg shadow-sm w-fit">
+                    <span className="animate-pulse">Assistant is typing…</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Input Area */}
+              <div className="border-t border-gray-200 p-3 bg-white flex">
+                <input
+                  type="text"
+                  placeholder="Type your message..."
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                />
+                <button onClick={handleSend} className="ml-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                  Send
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
     </>

@@ -15,6 +15,26 @@ function setGlobals(options: ChatBotOptions) {
     if (raw) (window as any).__AGENT_CONFIG = JSON.parse(raw);
   } catch {}
 
+  // Load guest profile and merge into config
+  try {
+    const guestRaw = localStorage.getItem('ai_agent_guest_profile');
+    if (guestRaw) {
+      const guestProfile = JSON.parse(guestRaw);
+      if (guestProfile) {
+        const existing = (window as any).__AGENT_CONFIG || {};
+        (window as any).__AGENT_CONFIG = {
+          ...existing,
+          role: guestProfile.role,
+          mission: guestProfile.mission,
+          responsibilities: guestProfile.responsibilities,
+          baseUrl: guestProfile.baseUrl,
+          routes: guestProfile.routes,
+          actions: guestProfile.actions,
+        };
+      }
+    }
+  } catch {}
+
   // Determine assets base URL
   try {
     const adminBase = (window as any).__AGENT_CONFIG?.assetsBaseUrl as string | undefined;

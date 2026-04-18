@@ -15,9 +15,11 @@ export interface Product {
 export interface Action {
   name: string;
   description: string;
-  endpoint: string;
-  method: 'GET' | 'POST';
+  endpoint?: string;
+  method?: 'GET' | 'POST';
   params?: Record<string, string>;
+  source?: 'api' | 'local';
+  localKey?: string;
 }
 
 export type UsageEventType = 'message_sent' | 'action_called' | 'product_clicked' | 'error';
