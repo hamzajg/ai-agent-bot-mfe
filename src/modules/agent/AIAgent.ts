@@ -5,15 +5,17 @@ import { openAIProvider } from "./services/openaiService";
 
 const provider = ((typeof window !== 'undefined' && (window as any).__AGENT_CONFIG?.provider) || import.meta.env.VITE_AI_PROVIDER || 'openai') as string;
 
+type StreamCallback = (chunk: string) => void;
+
 export const AIAgent = {
-  async sendMessage(message: string, localContext?: string): Promise<string> {
+  async sendMessage(message: string, localContext?: string, onStream?: StreamCallback): Promise<string> {
     switch (provider) {
       case 'gemini':
         return geminiProvider.send(message, localContext);
       case 'ollama':
         return ollamaProvider.send(message, localContext);
       default:
-        return openAIProvider.send(message, localContext);
+        return openAIProvider.send(message, localContext, onStream);
     }
   },
 };

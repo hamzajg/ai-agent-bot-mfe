@@ -162,6 +162,7 @@ const ChatBotWidget: React.FC = () => {
   });
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [streamText, setStreamText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -196,6 +197,14 @@ const ChatBotWidget: React.FC = () => {
   const append = (m: ChatMessage) => {
     setMessages((prev) => {
       const updated = [...prev, m];
+      writeChatHistory(updated);
+      return updated;
+    });
+  };
+
+  const updateMessage = (id: number, updates: Partial<ChatMessage>) => {
+    setMessages((prev) => {
+      const updated = prev.map((m) => (m.id === id ? { ...m, ...updates } : m));
       writeChatHistory(updated);
       return updated;
     });
@@ -237,9 +246,28 @@ const ChatBotWidget: React.FC = () => {
     setInput('');
 
 try {
-      setIsTyping(true);
+setIsTyping(true);
       const localContext = getLocalDataContext();
-      const reply = await AIAgent.sendMessage(content, localContext);
+
+      const messageId = Date.now();
+      const usedStreaming = true;
+      append({ sender: 'bot', text: '', id: messageId });
+
+      const streamContent = (chunk: string) => {
+        setStreamText((prev) => {
+          const newText = prev + chunk;
+          setMessages((msgs) => {
+            const updated = msgs.map((m) => 
+              m.id === messageId ? { ...m, text: newText } : m
+            );
+            return updated;
+          });
+          setTimeout(scrollToBottom, 10);
+          return newText;
+        });
+      };
+
+      const reply = await AIAgent.sendMessage(content, localContext, streamContent);
 
       // Try to extract and parse a JSON action object from the reply
       let handled = false;
@@ -360,19 +388,30 @@ try {
       }
 
       if (!handled) {
-        // If the user started with a greeting and had a request, prefer a single tailored message.
-        if (isGreetingIntent(content)) {
-          const combined = `Hi! ${reply}`;
-          append({ sender: 'bot', text: combined });
+        // If streaming was used, update the existing message instead of appending
+        if (usedStreaming) {
+          const finalText = isGreetingIntent(content) ? `Hi! ${reply}` : reply;
+          updateMessage(messageId, { text: finalText });
         } else {
-          append({ sender: 'bot', text: reply });
+          if (isGreetingIntent(content)) {
+            const combined = `Hi! ${reply}`;
+            append({ sender: 'bot', text: combined });
+          } else {
+            append({ sender: 'bot', text: reply });
+          }
         }
       }
     } catch (err: any) {
-      append({ sender: 'bot', text: 'Sorry, something went wrong. Please try again.' });
+      if (usedStreaming) {
+        updateMessage(messageId, { text: 'Sorry, something went wrong. Please try again.' });
+      } else {
+        append({ sender: 'bot', text: 'Sorry, something went wrong. Please try again.' });
+      }
       try { logEvent('error', { message: String(err && err.message ? err.message : err) }); } catch {}
     } finally {
       setIsTyping(false);
+      setStreamText('');
+      setTimeout(scrollToBottom, 100);
     }
   };
 
