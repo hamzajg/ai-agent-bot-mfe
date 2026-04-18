@@ -7,6 +7,109 @@ import { agentProfile, getAgentProfile, buildSystemPrompt } from '../../agent/ag
 import { readGuestProfile, readChatHistory, writeChatHistory, appendChatMessage, clearChatHistory, ChatMessage } from '@shared/utils/storage';
 import InitView from './InitView';
 
+function renderRichText(text: string, isBot: boolean): React.ReactNode {
+  if (!text) return null;
+
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+  let tableBuffer: string[] = [];
+
+  const flushTable = () => {
+    if (tableBuffer.length === 0) return;
+    const rows = tableBuffer.filter((r) => r.trim().startsWith('|') && r.trim().endsWith('|'));
+    if (rows.length > 0) {
+      elements.push(
+        <div key={`table-${elements.length}`} className="overflow-x-auto mb-2">
+          <table className="text-xs border-collapse w-full">
+            <tbody>
+              {rows.map((row, ri) => {
+                const cells = row.slice(1, -1).split('|').map((c) => c.trim());
+                return (
+                  <tr key={ri} className={ri === 0 ? 'font-semibold bg-gray-50' : ''}>
+                    {cells.map((cell, ci) => (
+                      <td key={ci} className={`px-2 py-1 ${ri === 0 ? 'border-b' : ''} ${ci === 0 ? 'border-r' : ''}`}>
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+    tableBuffer = [];
+  };
+
+  lines.forEach((line, i) => {
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      tableBuffer.push(trimmed);
+      return;
+    } else if (tableBuffer.length > 0) {
+      flushTable();
+    }
+
+    if (trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
+      elements.push(
+        <div key={i} className="flex items-start mb-1">
+          <span className="mr-2 text-gray-400">•</span>
+          <span>{trimmed.slice(2)}</span>
+        </div>
+      );
+    } else if (/^(\d+)\.\s/.test(trimmed)) {
+      const match = trimmed.match(/^(\d+)\.\s(.*)$/);
+      if (match) {
+        elements.push(
+          <div key={i} className="flex items-start mb-1 ml-2">
+            <span className="mr-2 font-medium opacity-70">{match[1]}.</span>
+            <span>{match[2]}</span>
+          </div>
+        );
+      }
+    } else if (/^#{1,3}\s/.test(trimmed)) {
+      const level = trimmed.match(/^(#{1,3})\s/)?.[1].length || 1;
+      const sizes = ['text-lg font-semibold', 'text-base font-medium', 'text-sm'];
+      elements.push(
+        <div key={i} className={`${sizes[level - 1]} mt-2 mb-1`}>
+          {trimmed.replace(/^#{1,3}\s/, '')}
+        </div>
+      );
+    } else if (/^`[^`]+`$/.test(trimmed)) {
+      elements.push(
+        <code key={i} className="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">
+          {trimmed.slice(1, -1)}
+        </code>
+      );
+    } else if (trimmed.includes(':')) {
+      const colonIdx = trimmed.indexOf(':');
+      const key = trimmed.slice(0, colonIdx).trim();
+      const val = trimmed.slice(colonIdx + 1).trim();
+      if (key.length > 0 && key.length < 30) {
+        elements.push(
+          <div key={i} className="flex flex-wrap items-baseline mb-1">
+            <span className="font-medium mr-1">{key}:</span>
+            <span>{val}</span>
+          </div>
+        );
+      } else {
+        elements.push(<div key={i}>{line}</div>);
+      }
+    } else if (trimmed.startsWith('http')) {
+      elements.push(
+        <a key={i} href={trimmed} className="text-blue-500 underline break-all">{trimmed}</a>
+      );
+    } else {
+      elements.push(<div key={i}>{line}</div>);
+    }
+  });
+
+  flushTable();
+  return elements;
+}
+
 function getLocalDataContext(): string {
   const profile = getAgentProfile();
   const actions = profile.actions || [];
@@ -52,6 +155,21 @@ const ChatBotWidget: React.FC = () => {
   });
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(scrollToBottom, 50);
+    }
+  }, [isOpen, initialized]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const currentProfile = getAgentProfile();
 
@@ -339,14 +457,21 @@ try {
                     className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className="max-w-[85%] p-3 rounded-2xl text-sm whitespace-pre-line"
-                      style={
-                        m.sender === 'user'
-                          ? { background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', color: 'white', borderBottomRightRadius: '4px' }
-                          : { background: '#ffffff', color: '#1f2937', borderBottomLeftRadius: '4px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }
-                      }
+                      className="max-w-[85%] p-3 rounded-2xl text-sm whitespace-pre-wrap break-words"
+                      style={{
+                        background: m.sender === 'user'
+                          ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
+                          : '#ffffff',
+                        color: m.sender === 'user' ? 'white' : '#1f2937',
+                        borderBottomRightRadius: m.sender === 'user' ? '4px' : '12px',
+                        borderBottomLeftRadius: m.sender === 'user' ? '12px' : '4px',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
+                        maxWidth: '280px',
+                      }}
                     >
-                      {m.text && <span>{m.text}</span>}
+                      {m.text && renderRichText(m.text, m.sender === 'bot')}
                       {m.link && (
                         <a
                           href={m.link}
@@ -378,23 +503,30 @@ try {
                     </div>
                   </div>
                 )}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Input Area - Improved styling */}
               <div className="border-t border-gray-100 p-3 bg-white">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="text"
+                <div className="flex items-end space-x-2">
+                  <textarea
                     placeholder="Type a message..."
-                    className="flex-1 bg-gray-50 border-0 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                    className="flex-1 bg-gray-50 border-0 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all resize-none"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                    rows={1}
+                    style={{ minHeight: '44px', maxHeight: '100px', overflowWrap: 'break-word' }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
                   />
                   <button
                     onClick={handleSend}
                     disabled={!input.trim()}
-                    className="p-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-xl transition-colors"
+                    className="p-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-xl transition-colors flex-shrink-0"
                   >
                     <Send className="w-4 h-4 text-white" />
                   </button>

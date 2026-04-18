@@ -230,5 +230,34 @@ export function buildSystemPrompt(): string {
   );
   lines.push('{"action":"<Action Name>","params":{"<key>":"<value>"}}');
   lines.push('Example: {"action":"Products Search","params":{"text":"wireless headphones"}}');
+  lines.push('');
+
+  lines.push('# Response Formatting Guidelines');
+  lines.push('When responding with structured data, use these formats the UI can render:');
+  lines.push('');
+  lines.push('## Tables');
+  lines.push('Use: | Header1 | Header2 |');
+  lines.push('     | Value1  | Value2  |');
+  lines.push('');
+  lines.push('## Bullet Lists');
+  lines.push('Use: - Item 1');
+  lines.push('     - Item 2');
+  lines.push('');
+  lines.push('## Numbered Lists');
+  lines.push('Use: 1. First item');
+  lines.push('     2. Second item');
+  lines.push('');
+  lines.push('## Key-Value Pairs');
+  lines.push('Use: Name: value');
+  lines.push('     Price: $99');
+  lines.push('');
+  lines.push('## Code');
+  lines.push('Use: `code here`');
+  lines.push('');
+  lines.push('## Headings');
+  lines.push('Use: # Main Heading');
+  lines.push('     ## Sub Heading');
+  lines.push('DO NOT use markdown code blocks (```). Use plain text with the formats above.');
+
   return lines.join('\n');
 }
