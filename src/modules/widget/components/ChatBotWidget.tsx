@@ -125,6 +125,19 @@ function getLocalDataContext(): string {
   const localActions = actions.filter((a) => a.source === 'local');
   if (!localActions.length) return '';
 
+  const sensitiveKeys = ['password', 'hash', 'token', 'secret', 'key', 'auth', 'credential', 'pwd'];
+  const isSensitive = (key: string) => sensitiveKeys.some((s) => key.toLowerCase().includes(s));
+
+  function sanitize(obj: any): any {
+    if (Array.isArray(obj)) return obj.map(sanitize);
+    if (obj && typeof obj === 'object') {
+      return Object.fromEntries(
+        Object.entries(obj).filter(([k]) => !isSensitive(k)).map(([k, v]) => [k, sanitize(v)])
+      );
+    }
+    return obj;
+  };
+
   const lines: string[] = [];
   lines.push('# Local Data (from browser storage)');
 
@@ -133,10 +146,12 @@ function getLocalDataContext(): string {
     try {
       const raw = localStorage.getItem(key);
       if (raw) {
-        const value = JSON.parse(raw);
-        lines.push(`## ${key}`);
-        lines.push(JSON.stringify(value));
-        lines.push('');
+        const value = sanitize(JSON.parse(raw));
+        if (value && Object.keys(value).length > 0) {
+          lines.push(`## ${key}`);
+          lines.push(JSON.stringify(value));
+          lines.push('');
+        }
       }
     } catch {}
   }
