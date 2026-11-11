@@ -13,7 +13,7 @@ export const AIAgent = {
       case 'gemini':
         return geminiProvider.send(message, localContext);
       case 'ollama':
-        return ollamaProvider.send(message, localContext);
+        return ollamaProvider.send(message, localContext, onStream);
       default:
         return openAIProvider.send(message, localContext, onStream);
     }
