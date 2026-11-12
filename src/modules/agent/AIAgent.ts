@@ -11,7 +11,7 @@ export const AIAgent = {
   async sendMessage(message: string, localContext?: string, onStream?: StreamCallback): Promise<string> {
     switch (provider) {
       case 'gemini':
-        return geminiProvider.send(message, localContext);
+        return geminiProvider.send(message, localContext, onStream);
       case 'ollama':
         return ollamaProvider.send(message, localContext, onStream);
       default:
