@@ -1,8 +1,8 @@
 # === Stage 1: Build the React app ===
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 COPY . .
 # Build both the widget (default) and the SPA (landing/admin) into dist/app
 # - `build` will produce the widget bundle as configured in vite.config.ts
