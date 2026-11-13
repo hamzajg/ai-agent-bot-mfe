@@ -1,8 +1,7 @@
-import { buildSystemPrompt, getAgentProfile } from "../agentProfile";
+import { buildSystemPromptWithContext, getAgentProfile } from "../agentProfile";
+import { readStreamLines, sseData, StreamCallback } from "./stream";
 
 const env = import.meta.env as any;
-
-type StreamCallback = (chunk: string) => void;
 
 export const openAIProvider = {
   async send(message: string, localContext?: string, onStream?: StreamCallback): Promise<string> {
@@ -11,11 +10,6 @@ export const openAIProvider = {
     if (!apiKey) {
       const profile = getAgentProfile();
       return `I'm ${profile.role}. ${profile.mission} How can I help you?`;
-    }
-
-    let systemPrompt = buildSystemPrompt();
-    if (localContext) {
-      systemPrompt += '\n\n' + localContext;
     }
 
     try {
@@ -28,45 +22,39 @@ export const openAIProvider = {
         body: JSON.stringify({
           model: 'gpt-4o-mini',
           messages: [
-            { role: 'system', content: systemPrompt },
+            { role: 'system', content: buildSystemPromptWithContext(localContext) },
             { role: 'user', content: message },
           ],
           stream: !!onStream,
         }),
       });
 
+      if (!res.ok) {
+        throw new Error(`OpenAI API error: ${res.status} ${res.statusText}`);
+      }
+
       if (onStream && res.body) {
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
         let fullContent = '';
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+        await readStreamLines(res.body, (line) => {
+          const data = sseData(line);
+          if (!data || data === '[DONE]') return;
 
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n').filter((line) => line.trim().startsWith('data: '));
-
-          for (const line of lines) {
-            const data = line.replace(/^data: /, '');
-            if (data === '[DONE]') continue;
-
-            try {
-              const parsed = JSON.parse(data);
-              const content = parsed.choices?.[0]?.delta?.content;
-              if (content) {
-                fullContent += content;
-                onStream(content);
-              }
-            } catch {}
-          }
-        }
+          try {
+            const parsed = JSON.parse(data);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              fullContent += content;
+              onStream(content);
+            }
+          } catch {}
+        });
 
         return fullContent;
-      } else {
-        const data = await res.json();
-        return data.choices?.[0]?.message?.content || 'No response.';
       }
+
+      const data = await res.json();
+      return data.choices?.[0]?.message?.content || 'No response.';
     } catch (e) {
       console.log('[OpenAI Error]:', e);
       throw e;
