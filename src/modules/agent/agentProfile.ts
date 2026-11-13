@@ -265,3 +265,7 @@ export function buildSystemPrompt(): string {
 
   return lines.join('\n');
 }
+export function buildSystemPromptWithContext(localContext?: string): string {
+  const base = buildSystemPrompt();
+  return localContext ? `${base}\n\n${localContext}` : base;
+}
