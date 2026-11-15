@@ -8,7 +8,9 @@ Current-state map. Descriptive, not aspirational; see `docs/adr/` for why.
 ai-agent-bot-mfe/
 ├── src/
 │   ├── modules/           feature modules (MFE-style)
-│   │   ├── agent/         chatbot agent
+│   │   ├── agent/         chatbot agent — AIAgent.ts provider switch,
+│   │   │                  services/{openai,gemini,ollama}Service.ts,
+│   │   │                  tools/actionExecutor.ts (tool layer, ADR 0002)
 │   │   ├── auth/          login/signup/session
 │   │   ├── dashboard/     admin dashboard
 │   │   ├── landing/       marketing page
@@ -35,6 +37,13 @@ ai-agent-bot-mfe/
 
 - **Chat:** widget/agent module → axios → configured AI provider
   (OpenAI / Gemini / Ollama) → streamed or plain response → UI.
+- **Tool use:** the model may answer with `{"action","params"}` JSON
+  naming a profile `Action`; `agent/tools/actionExecutor.ts` parses the
+  request, executes it (localStorage or HTTP via `executeAction`), and
+  formats the result — provider-agnostic, identical across all three
+  providers. Guarded by `isExplicitActionRequest` so JSON only fires on
+  explicit user asks. `toToolSpec()` maps actions to OpenAI-style
+  function specs for future native tool calling.
 - **Auth:** auth module handles session; dashboard/agent gated behind it.
 - **Embed:** external page loads widget bundle → chat UI mounts standalone.
 

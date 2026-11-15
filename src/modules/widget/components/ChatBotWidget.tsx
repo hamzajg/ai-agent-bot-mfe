@@ -4,6 +4,7 @@ import { AIAgent } from '../../agent/AIAgent';
 import { logEvent, getSettings } from '@shared/utils/usage';
 import { Product } from '@shared/types';
 import { agentProfile, getAgentProfile, buildSystemPrompt } from '../../agent/agentProfile';
+import { executeAction, findAction, formatActionResult, isExplicitActionRequest } from '../../agent/tools/actionExecutor';
 import { readGuestProfile, readChatHistory, writeChatHistory, appendChatMessage, clearChatHistory, ChatMessage } from '@shared/utils/storage';
 import InitView from './InitView';
 
@@ -358,87 +359,19 @@ try {
           }
 
           // Handle action only if user explicitly asked for it
-          if (!handled && obj && obj.action) {
-            const userLower = content.toLowerCase();
-            const explicitAction = /\b(search|find|lookup|add to cart|remove from cart|view cart|checkout|create order|confirm order)\b/i.test(userLower);
-            
-            if (explicitAction) {
-              const actionName = String(obj.action).toLowerCase();
-              const action = currentProfile.actions.find((a) => a.name.toLowerCase() === actionName);
+          if (!handled && obj && obj.action && isExplicitActionRequest(content)) {
+            const action = findAction(currentProfile.actions, String(obj.action));
             if (action) {
               try {
                 logEvent('action_called', { name: action.name, source: 'tool_call' });
-
-                let data: any = null;
-
-                // Handle local storage action
-                if (action.source === 'local' || action.localKey) {
-                  const localKey = action.localKey || action.name.toLowerCase().replace(/\s+/g, '_');
-                  const raw = localStorage.getItem(localKey);
-                  if (raw) {
-                    try {
-                      data = JSON.parse(raw);
-                    } catch {
-                      data = raw;
-                    }
-                  } else {
-                    data = null;
-                  }
-                } else {
-                  // Handle API action
-                  const base = (currentProfile.baseUrl || '').replace(/\/$/, '');
-                  const endpoint = action.endpoint || '';
-                  const url = endpoint.startsWith('http') ? endpoint : `${base}${endpoint}`;
-
-                  let fetchUrl = url;
-                  const params = obj.params || {};
-                  let fetchOptions: RequestInit = { method: (action.method || 'GET').toUpperCase() };
-                  if ((fetchOptions.method || 'GET') === 'GET') {
-                    const qs = new URLSearchParams();
-                    for (const [k, v] of Object.entries(params || {})) qs.set(k, String(v));
-                    fetchUrl = qs.toString() ? `${fetchUrl}${fetchUrl.includes('?') ? '&' : '?'}${qs.toString()}` : fetchUrl;
-                  } else {
-                    fetchOptions = { ...fetchOptions, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) };
-                  }
-
-                  const res = await fetch(fetchUrl, fetchOptions);
-                  const ctype = res.headers.get('content-type') || '';
-                  if (ctype.includes('application/json')) data = await res.json();
-                  else data = await res.text();
-                }
-
-                // Present results in a friendly way - interpret instead of just showing raw data
-                if (Array.isArray(data)) {
-                  if (data.length === 0) {
-                    append({ sender: 'bot', text: `No results found.` });
-                  } else {
-                    const preview = data.slice(0, 5).map((it: any, i: number) => {
-                      const name = it.title || it.name || it.id || 'item';
-                      const price = it.price ? ` - ${it.price}` : '';
-                      return `${i + 1}. ${name}${price}`;
-                    }).join('\n');
-                    const suffix = data.length > 5 ? `\n...and ${data.length - 5} more` : '';
-                    append({ sender: 'bot', text: `${preview}${suffix}` });
-                  }
-                } else if (typeof data === 'object' && data !== null) {
-                  const entries = Object.entries(data).filter(([k]) => !k.startsWith('_') && k !== 'id');
-                  if (entries.length <= 3) {
-                    const kv = entries.map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join('\n');
-                    append({ sender: 'bot', text: kv });
-                  } else {
-                    append({ sender: 'bot', text: JSON.stringify(data, null, 2) });
-                  }
-                } else {
-                  append({ sender: 'bot', text: String(data) });
-                }
-
+                const data = await executeAction(action, obj.params, currentProfile.baseUrl || '');
+                append({ sender: 'bot', text: formatActionResult(data) });
                 handled = true;
               } catch (err) {
                 append({ sender: 'bot', text: `Action failed: ${String(err)}` });
                 try { logEvent('error', { message: String(err) }); } catch {}
                 handled = true;
               }
-            }
             }
           }
         }
