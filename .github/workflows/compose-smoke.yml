@@ -1,0 +1,64 @@
+name: Compose smoke test
+
+# The image is an nginx serving the built SPA and widget bundle. The Docker job
+# proves it builds; this proves the container serves the app shell instead of an
+# empty web root (a mis-copied dist directory builds fine and serves 403/404).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compose-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: nginx serves the built app
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build and start the stack
+        # The compose file passes provider keys through as environment
+        # variables; the bundle is built in the image, so empty values are fine
+        # for a smoke test and no secrets are needed.
+        run: docker compose up --build --detach
+
+      - name: Wait for the SPA shell
+        run: |
+          set -uo pipefail
+          for attempt in $(seq 1 60); do
+            code=$(curl --silent --output /tmp/index.html --write-out '%{http_code}' \
+              http://localhost:8081/ || true)
+            echo "attempt ${attempt}: ${code}"
+            if [ "${code}" = "200" ]; then exit 0; fi
+            sleep 3
+          done
+          echo "::error::nginx never served the app shell"
+          exit 1
+
+      - name: Index is the SPA, not an empty directory listing
+        run: |
+          set -euo pipefail
+          head -c 400 /tmp/index.html; echo
+          grep --quiet --ignore-case '<div id="root"\|<script' /tmp/index.html
+
+      - name: Container is still running
+        run: |
+          set -euo pipefail
+          docker compose ps --status running --services
+
+      - name: Container logs
+        if: always()
+        run: docker compose logs --no-color --tail 100
+
+      - name: Tear down
+        if: always()
+        run: docker compose down --volumes --remove-orphans
