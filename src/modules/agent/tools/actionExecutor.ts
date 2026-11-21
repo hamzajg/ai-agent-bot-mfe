@@ -39,8 +39,11 @@ export function findAction(actions: Action[] | undefined, name: string): Action 
 /** True when the user's message explicitly asks for an action — the guard
  *  that stops the model's JSON habit from hijacking normal conversation. */
 export function isExplicitActionRequest(userText: string): boolean {
+  // Ignore JSON payloads: a tool name like "Products Search" inside an example
+  // object must not be mistaken for the user asking to run that tool.
+  const prose = userText.replace(/\{[\s\S]*\}/g, ' ');
   return /\b(search|find|lookup|add to cart|remove from cart|view cart|checkout|create order|confirm order)\b/i
-    .test(userText.toLowerCase());
+    .test(prose.toLowerCase());
 }
 
 /**

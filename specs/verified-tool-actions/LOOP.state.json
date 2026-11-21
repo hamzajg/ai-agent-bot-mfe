@@ -1,0 +1,33 @@
+{
+  "feature": "verified-tool-actions",
+  "status": "running",
+  "iterations": 3,
+  "review": "required",
+  "updated": "2026-11-21T19:08:46Z",
+  "waves": {
+    "1": {
+      "status": "in-progress",
+      "branch": "feat/verified-tool-actions-w1",
+      "pr": "\u2014",
+      "evidence": "\u2014",
+      "updated": "2026-11-21T19:08:46Z"
+    }
+  },
+  "gates": {
+    "G0": {
+      "status": "met",
+      "evidence": "file:specs/verified-tool-actions/SPEC.md",
+      "updated": "2026-11-21T19:02:37Z"
+    },
+    "G1": {
+      "status": "met",
+      "evidence": "file:specs/verified-tool-actions/DECISION-REVIEW.md",
+      "updated": "2026-11-21T19:03:03Z"
+    }
+  },
+  "events": [
+    "2026-11-21T19:02:37Z gate G0 met: file:specs/verified-tool-actions/SPEC.md",
+    "2026-11-21T19:03:03Z gate G1 met: file:specs/verified-tool-actions/DECISION-REVIEW.md",
+    "2026-11-21T19:08:46Z start wave 1 on feat/verified-tool-actions-w1"
+  ]
+}
