@@ -1,0 +1,48 @@
+{
+  "feature": "shared-utils-test-coverage",
+  "status": "done",
+  "iterations": 0,
+  "review": "required",
+  "updated": "2026-11-22T12:18:33Z",
+  "waves": {
+    "1": {
+      "status": "done",
+      "branch": "feat/shared-utils-test-coverage-w1",
+      "pr": "PR #17",
+      "evidence": "Merged PR #17 (a0f2b96). Added colocated Vitest coverage for storage.ts/usage.ts; 24/24 tests, build:all green.",
+      "bundle": "",
+      "updated": "2026-11-22T12:17:22Z"
+    }
+  },
+  "gates": {
+    "G0": {
+      "status": "met",
+      "evidence": "SPEC.md Value contract filled: >=10 passing shared-utils tests in CI within 30 days, 0 regressions in existing 15 tests.",
+      "updated": "2026-11-22T12:14:24Z"
+    },
+    "G1": {
+      "status": "met",
+      "evidence": "DECISION-REVIEW.md VERDICT ACCEPT \u2014 colocated Vitest unit tests, behavior-preserving fixes only.",
+      "updated": "2026-11-22T12:14:30Z"
+    },
+    "G2": {
+      "status": "met",
+      "evidence": "DOMAIN.md simple tier, no new domain concepts; terms aligned to storage/usage helpers.",
+      "updated": "2026-11-22T12:14:36Z"
+    },
+    "G3": {
+      "status": "met",
+      "evidence": "SPEC.md ## Experience: N/A \u2014 internal utility test coverage; no user-facing UI flow, copy, or interaction changes.",
+      "updated": "2026-11-22T12:14:43Z"
+    }
+  },
+  "events": [
+    "2026-11-22T12:14:24Z gate G0 met: SPEC.md Value contract filled: >=10 passing shared-utils tests in CI within 30 days, 0 regressions in existing 15 tests.",
+    "2026-11-22T12:14:30Z gate G1 met: DECISION-REVIEW.md VERDICT ACCEPT \u2014 colocated Vitest unit tests, behavior-preserving fixes only.",
+    "2026-11-22T12:14:36Z gate G2 met: DOMAIN.md simple tier, no new domain concepts; terms aligned to storage/usage helpers.",
+    "2026-11-22T12:14:43Z gate G3 met: SPEC.md ## Experience: N/A \u2014 internal utility test coverage; no user-facing UI flow, copy, or interaction changes.",
+    "2026-11-22T12:17:14Z start wave 1 on feat/shared-utils-test-coverage-w1",
+    "2026-11-22T12:17:22Z complete wave 1 (PR #17): Merged PR #17 (a0f2b96). Added colocated Vitest coverage for storage.ts/usage.ts; 24/24 tests, build:all green.",
+    "2026-11-22T12:18:33Z feature validated and shipped"
+  ]
+}
