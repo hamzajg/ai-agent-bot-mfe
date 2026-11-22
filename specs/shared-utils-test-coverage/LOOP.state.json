@@ -1,0 +1,36 @@
+{
+  "feature": "shared-utils-test-coverage",
+  "status": "running",
+  "iterations": 0,
+  "review": "required",
+  "updated": "2026-11-22T12:14:43Z",
+  "waves": {},
+  "gates": {
+    "G0": {
+      "status": "met",
+      "evidence": "SPEC.md Value contract filled: >=10 passing shared-utils tests in CI within 30 days, 0 regressions in existing 15 tests.",
+      "updated": "2026-11-22T12:14:24Z"
+    },
+    "G1": {
+      "status": "met",
+      "evidence": "DECISION-REVIEW.md VERDICT ACCEPT \u2014 colocated Vitest unit tests, behavior-preserving fixes only.",
+      "updated": "2026-11-22T12:14:30Z"
+    },
+    "G2": {
+      "status": "met",
+      "evidence": "DOMAIN.md simple tier, no new domain concepts; terms aligned to storage/usage helpers.",
+      "updated": "2026-11-22T12:14:36Z"
+    },
+    "G3": {
+      "status": "met",
+      "evidence": "SPEC.md ## Experience: N/A \u2014 internal utility test coverage; no user-facing UI flow, copy, or interaction changes.",
+      "updated": "2026-11-22T12:14:43Z"
+    }
+  },
+  "events": [
+    "2026-11-22T12:14:24Z gate G0 met: SPEC.md Value contract filled: >=10 passing shared-utils tests in CI within 30 days, 0 regressions in existing 15 tests.",
+    "2026-11-22T12:14:30Z gate G1 met: DECISION-REVIEW.md VERDICT ACCEPT \u2014 colocated Vitest unit tests, behavior-preserving fixes only.",
+    "2026-11-22T12:14:36Z gate G2 met: DOMAIN.md simple tier, no new domain concepts; terms aligned to storage/usage helpers.",
+    "2026-11-22T12:14:43Z gate G3 met: SPEC.md ## Experience: N/A \u2014 internal utility test coverage; no user-facing UI flow, copy, or interaction changes."
+  ]
+}
