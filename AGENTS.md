@@ -12,7 +12,7 @@ Tailwind (postcss). Docker + nginx for deployment.
 
 ## Commands
 
-Verified 2026-11-13 against CI (`.github/workflows/ci.yml`) and
+Verified 2026-11-21 against CI (`.github/workflows/ci.yml`) and
 `package.json`.
 
 | Task | Command |
@@ -20,6 +20,7 @@ Verified 2026-11-13 against CI (`.github/workflows/ci.yml`) and
 | Install | `npm ci` |
 | Dev server | `npm run dev` (Vite, `vite.config.ts`) |
 | Build all (CI) | `npm run build:all` = `build:spa` + `build` |
+| Test | `npm test` (Vitest; tool-path suite) |
 | SPA build | `npm run build:spa` (`vite.config.ts`) |
 | Widget build | `npm run build` (`vite.widget.config.ts`) |
 | Preview | `npm run preview` |

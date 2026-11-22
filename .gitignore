@@ -38,6 +38,9 @@ lerna-debug.log*
 # Testing
 coverage/
 
+# Local harness evidence (generated scratch)
+.openharness/
+
 # Operating System
 .DS_Store
 Thumbs.db
