@@ -44,6 +44,7 @@ measurable — a number, a unit, and a review window.
 - `src/modules/agent/tools/actionExecutor.test.ts` — colocated Vitest scenarios covering the tool pipeline.
 - `package.json` / `package-lock.json` — add a `test` script and the Vitest dev dependency.
 - `.github/workflows/ci.yml` — run the test step alongside the existing SPA + widget build.
+- `.gitignore` — ignore local harness evidence scratch.
 - `specs/verified-tool-actions/` — this spec, its scenarios, backlog, gates and audit artifacts.
 
 ## Scope (out)
